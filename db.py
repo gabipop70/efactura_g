@@ -1,6 +1,8 @@
 from datetime import datetime
 import sqlite3
+from wsgiref import headers
 from factura import Entitate, Factura, Produs
+import requests
 
 DB_NAME = "efactura.db"
 
@@ -164,7 +166,7 @@ def salveaza_factura_completa(
 
     furnizor_id = adauga_entitate("furnizori", furnizor)
     client_id   = adauga_entitate("clienti", client)
-
+   
     c.execute('''
         INSERT INTO facturi
           (numar, data, furnizor_id, client_id,
@@ -265,3 +267,70 @@ def format_data_ro(data_input):
             if "." in data_str:
                 return data_str
             return data_str # Returnăm originalul dacă nu recunoaștem formatul
+
+def cauta_firma_anaf(cui):
+    url = "https://webservicesp.anaf.ro/PlatitorTvaRest/api/v3/ws/tva"
+    data = {
+        "cui": [
+            {
+                "cui": str(cui),
+                "data": datetime.today().strftime("%Y-%m-%d")
+            }
+        ]
+    }
+    try:
+        r = requests.post(url, json=data)
+        if r.status_code == 200:
+            rezultat = r.json()
+            if rezultat and "found" in rezultat and rezultat["found"]:
+                info = rezultat["found"][0]
+                adresa_completa = info.get("adresa", "")
+                # Împărțim adresa după virgulă
+                parts = [p.strip() for p in adresa_completa.split(",")]
+                # Heuristic: localitatea e de obicei pe poziția 1 sau 2
+                localitate = ""
+                if len(parts) > 1:
+                    # Caută "ORAȘ", "MUN.", "SAT", "SECTOR", "MUNICIPIUL", "COM.", "BUCURESTI"
+                    for p in parts:
+                        if any(x in p.upper() for x in ["ORAȘ", "MUN.", "SAT", "SECTOR", "MUNICIPIUL", "COM.", "BUCURESTI"]):
+                            localitate = p
+                            break
+                return {
+                    "cui": info.get("cui"),
+                    "denumire": info.get("denumire"),
+                    "adresa": adresa_completa,
+                    "localitate": localitate,
+                    "nr_reg_com": info.get("nrRegCom"),
+                }
+            else:
+                return None
+        else:
+            print("Eroare la răspunsul ANAF:", r.status_code, r.text)
+            return None
+    except Exception as e:
+        print("Eroare la interogare ANAF:", e)
+        return None
+
+def get_ultimul_numar_factura_client(client_cui):
+        import sqlite3
+        conn = sqlite3.connect('efactura.db')
+        cursor = conn.cursor()
+        try:
+            query = """
+                    SELECT MAX(CAST(f.numar AS INTEGER))
+                    FROM facturi f
+                             JOIN clienti c ON f.client_id = c.id
+                    WHERE c.cui = ?
+                    """
+            cursor.execute(query, (client_cui,))
+            result = cursor.fetchone()
+            conn.close()
+            if result and result[0] is not None:
+                return int(result[0])
+            return None
+        except Exception as e:
+            try:
+                conn.close()
+            except:
+                pass
+            return None
