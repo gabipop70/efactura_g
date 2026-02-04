@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 from datetime import datetime
+from tkinter import messagebox
 
 import messagebox
 
@@ -64,7 +65,7 @@ class AplicatieFactura:
         # === AICI ADAUGĂM GENERAREA AUTOMATĂ A NUMĂRULUI ===
 
         # === DETALII FACTURA ===
-        tk.Label(self.master, text="🧾 Detalii", font="bold").grid(row=10, column=2)
+        tk.Label(self.master, text="🧾 Detalii factura", font="bold").grid(row=10, column=2, columnspan=3)
         self.numar_entry = self._entry("Număr", 11, 2)
         self.data_entry = self._entry("Data", 12, 2, default=datetime.now().strftime("%Y-%m-%d"))
 
@@ -107,6 +108,14 @@ class AplicatieFactura:
 
         tk.Button(self.master, text="GENEREAZĂ FACTURA", bg="green", fg="white", 
                   command=self.actiune_generare).grid(row=19, column=0, columnspan=5, pady=20)
+
+        raspuns = messagebox.askyesno("Generare Factura", "Doresti sa generezi o noua factura?")
+        if raspuns:
+            # Codul pentru generarea facturii
+            self.resetare_campuri()
+        else:
+            # Poți pune aici alt cod, sau pur și simplu să nu faci nimic
+            self.destroy()  # Inchide fereastra
 
     # --- HELPERS UI ---
     def _entry(self, label, row, col, default=""):
@@ -278,9 +287,29 @@ class AplicatieFactura:
             # Reset
             self.produse = []
             self.listbox.delete(0, tk.END)
+
             
         except Exception as e:
             messagebox.showerror("Eroare Generare", f"Ceva nu a mers bine:\n{str(e)}")
+        return
+
+
+
+    def resetare_campuri(self):
+        for entry in [
+            self.furnizor_nume, self.furnizor_cui, self.furnizor_onrc, self.furnizor_adresa,
+            self.furnizor_localitate, self.furnizor_judet,
+            self.furnizor_banca, self.furnizor_iban, self.furnizor_banca1, self.furnizor_iban1,
+            self.client_nume, self.client_cui, self.client_onrc, self.client_adresa,
+            self.client_localitate, self.client_judet,
+            self.client_banca, self.client_iban, self.client_banca1, self.client_iban1,
+            self.numar_entry, self.data_entry
+        ]:
+            entry.delete(0, tk.END)
+            entry.config(state='normal')
+            self.furnizor_cui.focus_set()
+
+
 
 if __name__ == "__main__":
     root = tk.Tk()
