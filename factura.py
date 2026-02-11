@@ -37,6 +37,10 @@ class Factura:
     client: Entitate
     produse: List[Produs] = field(default_factory=list)
 
+    def adauga_produs(self, produs):
+        """Aceasta este metoda care lipsește acum"""
+        self.produse.append(produs)
+
     def total_fara_tva(self):
         return sum(p.total() for p in self.produse)
 

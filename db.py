@@ -334,3 +334,32 @@ def get_ultimul_numar_factura_client(client_cui):
             except:
                 pass
             return None
+
+def cauta_facturi_dupa_cui(cui_furnizor, cui_client=None):
+    import sqlite3
+    conn = sqlite3.connect('efactura.db')
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+
+    c.execute("""
+        SELECT
+            f.numar,
+            f.data,
+            c.nume AS nume_client,
+            c.cui AS cui_client,
+            c.id AS id_c,
+            fr.nume AS nume_furnizor,
+            fr.cui AS cui_furnizor,
+            fr.id AS id_f,
+            f.total_general
+        FROM facturi f
+        JOIN furnizori fr ON f.furnizor_id = fr.id
+        JOIN clienti c ON f.client_id = c.id
+        WHERE fr.cui = ?
+            AND (? IS NULL OR c.cui = ?)
+        ORDER BY f.data DESC
+    """, (cui_furnizor,cui_client,cui_client))
+    rows = c.fetchall()
+
+    conn.close()
+    return [dict(row) for row in rows]

@@ -4,9 +4,10 @@ from tkinter import messagebox
 from tkinter import ttk
 
 import messagebox
+from tensorflow.python.framework.test_ops import none
 
 # Importam modulele locale
-from db import get_unitati_text_format, creare_tabele, populate_unitati_default
+from db import get_unitati_text_format, creare_tabele, populate_unitati_default, cauta_facturi_dupa_cui
 import utils
 
 
@@ -110,7 +111,8 @@ class AplicatieFactura:
         # Buton stergere
         tk.Button(self.master, text="🗑️ Șterge produs selectat", command=self.sterge_produs).grid(row=18, column=3,
                                                                                                   columnspan=5)
-
+        tk.Button(self.master, text="🔍 Caută facturi după CUI", command=self.cautare_facturi_dupa_cui).grid(row=12, column=6,
+                                                                                                  columnspan=3, padx=15)
         tk.Button(self.master, text="GENEREAZĂ FACTURA", bg="green", fg="white",
                   command=self.actiune_generare).grid(row=19, column=0, columnspan=5, pady=20)
 
@@ -335,3 +337,67 @@ class AplicatieFactura:
         self.listbox.insert(tk.END, separator)
 
         self.furnizor_cui.focus_set()
+
+    def cautare_facturi_dupa_cui(self):
+        win = tk.Toplevel(self.master)
+        win.title("Caută facturi după CUI")
+
+        # UI Setup
+        tk.Label(win, text="CUI furnizor:").grid(row=0, column=0)
+        cui_entry = tk.Entry(win)
+        cui_entry.grid(row=0, column=1)
+
+        tk.Label(win, text="CUI client:").grid(row=1, column=0)
+        cui_entryc = tk.Entry(win)
+        cui_entryc.grid(row=1, column=1)
+
+        # Listbox - Folosim font Monospace pentru a păstra coloanele aliniate
+        listbox = tk.Listbox(win, width=100, font=("Courier", 10))
+        listbox.grid(row=3, column=0, columnspan=2, pady=10)
+
+        def executa_cautare():
+            cui = cui_entry.get().strip()
+            cui_c = cui_entryc.get().strip()
+            if cui_c == "":
+                cui_c = None
+
+            rezultate = cauta_facturi_dupa_cui(cui, cui_c)
+            listbox.delete(0, tk.END)
+
+            if rezultate:
+                header = f"{'Număr':<10} | {'Data':<15} | {'Client':<40} | {'Total':<15}"
+                listbox.insert(tk.END, header)
+                listbox.insert(tk.END, "-" * 80)
+                for factura in rezultate:
+                    listbox.insert(
+                        tk.END,
+                        f"{factura['numar']:<10} | {factura['data']:<15} | {factura['nume_client']:<40} | {factura['total_general']:<15}"
+                    )
+            else:
+                listbox.insert(tk.END, "Nu s-au găsit facturi.")
+
+        def action_listeaza():
+            """Extrage selecția din listbox și generează PDF"""
+            try:
+                selection = listbox.curselection()
+                if not selection:
+                    print("Te rugăm să selectezi o factură din listă!")
+                    return
+
+                index = selection[0]
+                if index < 2:  # Ignorăm header-ul și linia de separare
+                    return
+
+                text_linie = listbox.get(index)
+                # Extragem primul element (numărul facturii) înainte de separatorul |
+                nr_factura = text_linie.split('|')[0].strip()
+
+                # Apelăm generarea din modulul utils
+                utils.genereaza_pdf_din_db(nr_factura)
+
+            except Exception as e:
+                print(f"Eroare la listare: {e}")
+
+        # Butoanele sunt la același nivel cu definițiile funcțiilor de mai sus
+        tk.Button(win, text="Caută", command=executa_cautare).grid(row=2, column=0, columnspan=2, pady=5)
+        tk.Button(win, text="Listează factura", command=action_listeaza).grid(row=4, column=0, columnspan=2, pady=5)
