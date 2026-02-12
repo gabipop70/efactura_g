@@ -9,6 +9,7 @@ from tensorflow.python.framework.test_ops import none
 # Importam modulele locale
 from db import get_unitati_text_format, creare_tabele, populate_unitati_default, cauta_facturi_dupa_cui
 import utils
+from utils import centreaza_fereastra
 
 
 # AICI IMPORTAM NOUL FISIER DE FUNCTII
@@ -20,6 +21,7 @@ class AplicatieFactura:
         populate_unitati_default()
 
         self.master = master
+        centreaza_fereastra(master, 1000, 700)
         master.title("🧾 Generator e-Facturi XML + PDF")
         self.master.option_add("*Font", "Arial 10")
 
@@ -111,8 +113,8 @@ class AplicatieFactura:
         # Buton stergere
         tk.Button(self.master, text="🗑️ Șterge produs selectat", command=self.sterge_produs).grid(row=18, column=3,
                                                                                                   columnspan=5)
-        tk.Button(self.master, text="🔍 Caută facturi după CUI", command=self.cautare_facturi_dupa_cui).grid(row=12, column=6,
-                                                                                                  columnspan=3, padx=15)
+        tk.Button(self.master, text="🔍 Caută facturi după CUI", command=self.cautare_facturi_dupa_cui).grid(row=21, column=0,
+                                                                                                  columnspan=5, padx=15)
         tk.Button(self.master, text="GENEREAZĂ FACTURA", bg="green", fg="white",
                   command=self.actiune_generare).grid(row=19, column=0, columnspan=5, pady=20)
 
@@ -340,6 +342,9 @@ class AplicatieFactura:
 
     def cautare_facturi_dupa_cui(self):
         win = tk.Toplevel(self.master)
+
+        centreaza_fereastra(win, 800,600)
+
         win.title("Caută facturi după CUI")
 
         # UI Setup
@@ -381,7 +386,7 @@ class AplicatieFactura:
             try:
                 selection = listbox.curselection()
                 if not selection:
-                    print("Te rugăm să selectezi o factură din listă!")
+                    messagebox.showwarning("Te rugăm să selectezi o factură din listă!")
                     return
 
                 index = selection[0]

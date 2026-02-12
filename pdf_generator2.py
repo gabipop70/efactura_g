@@ -36,7 +36,7 @@ def export_pdf(factura: Factura, filename="Factura.pdf"):
         ('ALIGN', (0, 0), (0, -1), 'LEFT'),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
         ('TEXTCOLOR', (0, 0), (0, -1), colors.grey),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
     ]))
 
     data_furnizor = [
@@ -48,6 +48,8 @@ def export_pdf(factura: Factura, filename="Factura.pdf"):
         ['Judet:', factura.furnizor.judet],
         ['Banca:', factura.furnizor.banca],
         ['IBAN:', factura.furnizor.iban],
+        ['Banca:', factura.furnizor.banca1],
+        ['IBAN:', factura.furnizor.iban1],
     ]
     tabel_furnizor = Table(data_furnizor, hAlign='LEFT')
     tabel_furnizor.setStyle(TableStyle([
@@ -57,6 +59,8 @@ def export_pdf(factura: Factura, filename="Factura.pdf"):
         ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
         ('ALIGN', (1, 0), (1, -1), 'LEFT'),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 1),  # Implicit este 3 sau 5
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 1),  # Reducem la 1 punct
     ]))
 
     data_client = [
@@ -77,6 +81,8 @@ def export_pdf(factura: Factura, filename="Factura.pdf"):
         ('ALIGN', (0, 0), (0, -1), 'LEFT'),
         ('ALIGN', (1, 0), (1, -1), 'LEFT'),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 1),  # Implicit este 3 sau 5
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 1),  # Reducem la 1 punct
     ]))
 
     tabel_principal = Table(
