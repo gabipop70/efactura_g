@@ -1,3 +1,5 @@
+import os
+
 from db import format_data_ro
 from factura import Factura, suma_in_litere
 
@@ -7,6 +9,16 @@ def export_pdf(factura: Factura, filename="Factura.pdf"):
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
     from reportlab.lib.styles import getSampleStyleSheet
     from reportlab.lib import colors
+    from reportlab.platypus import Image
+
+    # Calea către fișierul tău (ex: "stampila.png")
+    path_stampila = "d:/lucru/eFactura_python/semn_stamp.jpg"
+
+    # Verificăm dacă fișierul există pentru a evita erori la generare
+    img_stampila = None
+    if os.path.exists(path_stampila):
+        img_stampila = Image(path_stampila, width=60, height=60)  # Ajustezi dimensiunile aici
+        img_stampila.hAlign = 'CENTER'
 
     doc = SimpleDocTemplate(
         filename,
@@ -96,7 +108,7 @@ def export_pdf(factura: Factura, filename="Factura.pdf"):
     elements.append(tabel_principal)
     elements.append(Spacer(1, 24))
 
-    # --- MAIN LOGIC: DETECT IF TVA EXISTS ---
+    # --- DACA AVEM TVA ---
     has_tva = factura.total_tva() > 0
 
     if has_tva:
@@ -148,10 +160,84 @@ def export_pdf(factura: Factura, filename="Factura.pdf"):
 
     elements.append(table_produse)
 
+    # --- SECȚIUNE FINALĂ: FURNIZOR (S) | DELEGAT (M) | TOTAL + CLIENT (D) ---
+    elements.append(Spacer(1, 0))
+
+    style_celula = styles["Normal"]
+    style_celula.fontSize = 8
+    style_celula.leading = 10
+
+    # Pregătim textul pentru coloana din mijloc (Delegat)
+    text_delegat = (
+        "<b>DATE DELEGAT</b><br/>"
+        "Nume si prenume: .................................................<br/>"
+        "B.I./C.I.: ........ seria ........ nr .............<br/>"
+        "Mijloc transport: ......................... "
+        "Data expedierii: ..........................<br/>"
+        "Semnatura de primire............................."
+    )
+
+    # Pregătim textul pentru coloana din dreapta (Total + Primire)
+    # Folosim datele din factura calculată anterior
+    text_dreapta = (
+        f"<b>TOTAL DE PLATA:</b><br/>"
+        f"<font size='12'><b>{factura.total_general():.2f} RON</b></font><br/>"
+        f"<br/><br/><br/>"
+
+    )
+    # Pregătim conținutul pentru caseta furnizor (Stânga)
+    cell_furnizor = []
+    cell_furnizor.append(Paragraph("Semnatura si stampila furnizorului", style_celula))
+    if img_stampila:
+        cell_furnizor.append(Spacer(1, 5))  # Mic spațiu între text și imagine
+        cell_furnizor.append(img_stampila)
+    # Construim rândul tabelului
+    # Coloana 0: Furnizor | Coloana 1: Delegat | Coloana 2: Total + Client
+    data_finala = [
+        [
+            cell_furnizor,
+            Paragraph(text_delegat, style_celula),
+            Paragraph(text_dreapta, style_celula)
+        ]
+    ]
+
+    # Ajustăm lățimile pentru a lăsa mai mult loc în dreapta pentru total
+    tabel_final = Table(data_finala, colWidths=[140, 210, 140])
+
+    tabel_final.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+
+        # Aliniere text
+        ('ALIGN', (0, 0), (0, 0), 'CENTER'),  # Furnizor centrat
+        ('ALIGN', (1, 0), (1, 0), 'LEFT'),
+        ('ALIGN', (2, 0), (2, 0), 'CENTER'),  # Totalul aliniat la dreapta
+
+        # Chenare (BOX)
+        ('BOX', (0, 0), (0, 0), 0.5, colors.black),  # Caseta Furnizor
+        ('BOX', (1, 0), (1, 0), 0.5, colors.black),  # Caseta Delegat
+        ('BOX', (2, 0), (2, 0), 0.5, colors.black),  # Caseta Total + Client
+
+        # Înălțime pentru semnături
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (1, 0), (2, 0), 2),
+        ('RIGHTPADDING', (2, 0), (2, 0), 10),
+    ]))
+
+    elements.append(tabel_final)
+
     # --- CHITANTA ---
     elements.append(Spacer(1, 30))
     elements.append(HRFlowable(width="100%", thickness=1, lineCap='round', color=colors.grey, dash=[2, 4]))
     elements.append(Spacer(1, 20))
+
+    cell_chit = []
+    cell_chit.append(Paragraph("Semnatura si stampila ", style_celula))
+    if img_stampila:
+        cell_chit.append(Spacer(1, 5))  # Mic spațiu între text și imagine
+        cell_chit.append(img_stampila)
 
     data_chitanta = [
         [Paragraph(f"<b>CHITANTA Nr. {factura.numar}</b>", style_titlu_factura), ""],
@@ -161,17 +247,17 @@ def export_pdf(factura: Factura, filename="Factura.pdf"):
         [f"Suma în litere: {suma_in_litere(suma)}", ""],
         [f"Reprezentand: Contravaloare factura nr. {factura.numar} / {data_formatata}", ""],
         ["", ""],
-        [f"Furnizor: {factura.furnizor.nume}", "Semnatura si stampila"]
+        [f"Furnizor: {factura.furnizor.nume}", cell_chit]
     ]
 
     tabel_chitanta = Table(data_chitanta, colWidths=[350, 150])
     tabel_chitanta.setStyle(TableStyle([
         ('BOX', (0, 0), (-1, -1), 1, colors.black),
         ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('SPAN', (0, 0), (1, 0)),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
+        ('LEFTPADDING', (0, 0), (-1, -1), 1),
         ('ALIGN', (0, 0), (1, 0), 'CENTER'),
         ('ALIGN', (1, -1), (1, -1), 'CENTER'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),

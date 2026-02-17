@@ -58,6 +58,7 @@ def creare_tabele():
         total_fara_tva REAL,
         total_tva REAL,
         total_general REAL,
+        nr_chit TEXT,
         FOREIGN KEY(furnizor_id) REFERENCES furnizori(id),
         FOREIGN KEY(client_id) REFERENCES clienti(id)
     )''')
