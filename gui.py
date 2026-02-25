@@ -4,12 +4,13 @@ from tkinter import messagebox
 from tkinter import ttk
 
 import messagebox
+from matplotlib.sphinxext.plot_directive import align
 from tensorflow.python.framework.test_ops import none
 
 # Importam modulele locale
 from db import get_unitati_text_format, creare_tabele, populate_unitati_default, cauta_facturi_dupa_cui
 import utils
-from utils import centreaza_fereastra
+from utils import centreaza_fereastra, sugereaza_nr_chitanta
 
 
 # AICI IMPORTAM NOUL FISIER DE FUNCTII
@@ -24,6 +25,7 @@ class AplicatieFactura:
         centreaza_fereastra(master, 1000, 700)
         master.title("🧾 Generator e-Facturi XML + PDF")
         self.master.option_add("*Font", "Arial 10")
+        self.master.configure(bg="#e0f7fa")
 
         self.produse = []
 
@@ -32,10 +34,9 @@ class AplicatieFactura:
 
     def _setup_ui(self):
         # Aici punem tot codul care deseneaza Label-uri si Entry-uri
-        # (Am simplificat codul pentru claritate, pastreaza structura ta de grid)
 
         # === FURNIZOR ===
-        tk.Label(self.master, text="📌 Furnizor", font=("Arial", 11, "bold")).grid(row=0, column=0, columnspan=3)
+        tk.Label(self.master, text="📌 Furnizor", bg="#e0f7fa",font=("Arial", 11, "bold")).grid(row=0, column=0, columnspan=3)
         self.furnizor_cui = self._entry("CUI", 1, 0)
         self.furnizor_nume = self._entry("Denumire", 1, 1)
         self.furnizor_onrc = self._entry("ONRC", 2, 0)
@@ -115,12 +116,49 @@ class AplicatieFactura:
                                                                                                   columnspan=5)
         tk.Button(self.master, text="🔍 Caută facturi după CUI", command=self.cautare_facturi_dupa_cui).grid(row=21, column=0,
                                                                                                   columnspan=5, padx=15)
+
+
+        # Check box chitanta
+
+        # === ZONA CHITANȚĂ ===
+        self.vrea_chitanta_var = tk.BooleanVar(value=False)
+
+        # Checkbox-ul (Coloana 0)
+        self.chk_chitanta = tk.Checkbutton(
+            self.master,
+            text="Chitanta.",
+            variable=self.vrea_chitanta_var,
+            command=self.toggle_chitanta_ui  # Am adăugat legătura cu funcția
+        )
+        self.chk_chitanta.grid(row=19, column=0, columnspan=2, sticky="we", padx=5, pady=5)
+
+        # Etichetă (Coloana 1)
+        tk.Label(self.master, text="Nr. Chitanță:").grid(row=20, column=0, sticky="e",padx=5, pady=5)
+        vrea_chitanta = self.vrea_chitanta_var.get()
+        # Câmpul de intrare (Coloana 2)
+        self.entry_nr_chitanta = tk.Entry(self.master, state="disabled")  # Pornim dezactivat (pentru că bifa e False)
+        self.entry_nr_chitanta.grid(row=20, column=1, sticky="w", padx=5, pady=5)
+
+
         tk.Button(self.master, text="GENEREAZĂ FACTURA", bg="green", fg="white",
-                  command=self.actiune_generare).grid(row=19, column=0, columnspan=5, pady=20)
+                  command=self.actiune_generare).grid(row=22, column=0, columnspan=5, pady=20)
 
 
 
     # --- HELPERS UI ---
+    def toggle_chitanta_ui(self):
+        if self.vrea_chitanta_var.get():
+            self.entry_nr_chitanta.config(state="normal")
+            # Sugerăm automat un număr de chitanță când se bifează
+            nr_sugerat = sugereaza_nr_chitanta()
+            if nr_sugerat:
+                self.entry_nr_chitanta.delete(0, tk.END)
+                self.entry_nr_chitanta.insert(0, nr_sugerat)
+        else:
+            self.entry_nr_chitanta.delete(0, tk.END)
+            self.entry_nr_chitanta.config(state="disabled")
+
+
     def _entry(self, label, row, col, default=""):
         tk.Label(self.master, text=label).grid(row=row, column=col, sticky="e")
         e = tk.Entry(self.master, width=25)
@@ -141,6 +179,7 @@ class AplicatieFactura:
         e.grid(row=row, column=col + 1, columnspan=2, sticky="w")
         e.insert(0, default)
         return e
+
     def actiune_adauga_produs(self):
                 # 1. Colectam datele brute din UI
                 raw_data = {
@@ -287,7 +326,9 @@ class AplicatieFactura:
 
         d_factura = {
             'numar': self.numar_entry.get(),
-            'data': self.data_entry.get()
+            'data': self.data_entry.get(),
+            'nr_chit': self.entry_nr_chitanta.get(),
+            'vrea_chitanta': self.vrea_chitanta_var.get()
         }
 
         try:
@@ -337,6 +378,14 @@ class AplicatieFactura:
         separator = "------------------------------------------------------------------------------------------------------"
         self.listbox.insert(tk.END, header)
         self.listbox.insert(tk.END, separator)
+
+        # Resetare checkbox chitanță
+        self.vrea_chitanta_var.set(False)  # debifează checkbox-ul
+        self.entry_nr_chitanta.delete(0, tk.END)
+        self.entry_nr_chitanta.config(state="disabled")
+
+
+
 
         self.furnizor_cui.focus_set()
 

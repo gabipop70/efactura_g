@@ -87,7 +87,7 @@ def creare_tabele():
 
     conn.commit()
     conn.close()
-    
+
 def populate_unitati_default():
     unitati = [
                 ("H87", "Bucată", "BUC"),
@@ -108,11 +108,11 @@ def populate_unitati_default():
                     c.execute("INSERT INTO unitati (cod, denumire, presc) VALUES (?, ?, ?)", (cod, denumire, presc))
                 except sqlite3.IntegrityError:
                     pass  # Codul există deja
-                
+
     conn.commit()
     conn.close()
 
-        
+
 def get_unitati_text_format():
     # returnează lista în forma "C62 - Bucată"
     conn = conectare()
@@ -167,12 +167,12 @@ def salveaza_factura_completa(
 
     furnizor_id = adauga_entitate("furnizori", furnizor)
     client_id   = adauga_entitate("clienti", client)
-   
+
     c.execute('''
         INSERT INTO facturi
           (numar, data, furnizor_id, client_id,
-           total_fara_tva, total_tva, total_general)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+           total_fara_tva, total_tva, total_general, nr_chit)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         factura.numar,
         factura.data,
@@ -180,7 +180,8 @@ def salveaza_factura_completa(
         client_id,
         factura.total_fara_tva(),
         factura.total_tva(),
-        factura.total_general()
+        factura.total_general(),
+        factura.nr_chit
     ))
     factura_id = c.lastrowid
 
@@ -203,7 +204,7 @@ def salveaza_factura_completa(
     conn.close()
     print(f"✔ Factura {factura.numar} a fost salvată în baza de date.")
 
-    
+
 
 def get_entitate_dupa_cui(tabela: str, cui: str) -> dict | None:
     """
@@ -241,7 +242,7 @@ def get_entitate_dupa_cui(tabela: str, cui: str) -> dict | None:
         "banca1":     row["banca1"],
         "iban1":      row["iban1"],
     }
-    
+
 def format_data_ro(data_input):
     # """
     # Transformă o dată din format ISO (YYYY-MM-DD) sau obiect datetime
@@ -255,7 +256,7 @@ def format_data_ro(data_input):
         return data_input.strftime("%d.%m.%Y")
     # 2. Dacă data este un string
     data_str = str(data_input).strip()
-    
+
     try:
         # Încercăm să procesăm formatul standard ISO: "2025-12-23"
         return datetime.strptime(data_str, "%Y-%m-%d").strftime("%d.%m.%Y")
@@ -352,7 +353,8 @@ def cauta_facturi_dupa_cui(cui_furnizor, cui_client=None):
             fr.nume AS nume_furnizor,
             fr.cui AS cui_furnizor,
             fr.id AS id_f,
-            f.total_general
+            f.total_general,
+            f.nr_chit
         FROM facturi f
         JOIN furnizori fr ON f.furnizor_id = fr.id
         JOIN clienti c ON f.client_id = c.id
@@ -364,3 +366,25 @@ def cauta_facturi_dupa_cui(cui_furnizor, cui_client=None):
 
     conn.close()
     return [dict(row) for row in rows]
+
+def get_ultimul_nr_chitanta():
+        import sqlite3
+        conn = sqlite3.connect('efactura.db')
+        cursor = conn.cursor()
+        try:
+            query = """
+                    SELECT MAX(CAST(f.nr_chit AS INTEGER))
+                    FROM facturi f
+                    """
+            cursor.execute(query)
+            result = cursor.fetchone()
+            conn.close()
+            if result and result[0] is not None:
+                return int(result[0])
+            return None
+        except Exception as e:
+            try:
+                conn.close()
+            except:
+                pass
+            return None

@@ -1,5 +1,7 @@
 import os
 
+from reportlab.lib import styles
+
 from db import format_data_ro
 from factura import Factura, suma_in_litere
 
@@ -229,41 +231,42 @@ def export_pdf(factura: Factura, filename="Factura.pdf"):
     elements.append(tabel_final)
 
     # --- CHITANTA ---
-    elements.append(Spacer(1, 30))
-    elements.append(HRFlowable(width="100%", thickness=1, lineCap='round', color=colors.grey, dash=[2, 4]))
-    elements.append(Spacer(1, 20))
+    if factura.nr_chit:
+        elements.append(Spacer(1, 30))
+        elements.append(HRFlowable(width="100%", thickness=1, lineCap='round', color=colors.grey, dash=[2, 4]))
+        elements.append(Spacer(1, 20))
 
-    cell_chit = []
-    cell_chit.append(Paragraph("Semnatura si stampila ", style_celula))
-    if img_stampila:
-        cell_chit.append(Spacer(1, 5))  # Mic spațiu între text și imagine
-        cell_chit.append(img_stampila)
+        cell_chit = []
+        cell_chit.append(Paragraph("Semnatura si stampila ", style_celula))
+        if img_stampila:
+            cell_chit.append(Spacer(1, 5))  # Mic spațiu între text și imagine
+            cell_chit.append(img_stampila)
 
-    data_chitanta = [
-        [Paragraph(f"<b>CHITANTA Nr. {factura.numar}</b>", style_titlu_factura), ""],
-        [f"Data: {data_formatata}", ""],
-        [f"Am primit de la: {factura.client.nume}", ""],
-        [f"Suma de: {suma:.2f} RON", f"CUI: {factura.client.cui}"],
-        [f"Suma în litere: {suma_in_litere(suma)}", ""],
-        [f"Reprezentand: Contravaloare factura nr. {factura.numar} / {data_formatata}", ""],
-        ["", ""],
-        [f"Furnizor: {factura.furnizor.nume}", cell_chit]
-    ]
+        data_chitanta = [
+            [Paragraph(f"<b>CHITANTA Nr. {factura.nr_chit}</b>", style_titlu_factura), ""],
+            [f"Data: {data_formatata}", ""],
+            [f"Am primit de la: {factura.client.nume}", ""],
+            [f"Suma de: {suma:.2f} RON", f"CUI: {factura.client.cui}"],
+            [f"Suma în litere: {suma_in_litere(suma)}", ""],
+            [f"Reprezentand: Contravaloare factura nr. {factura.numar} / {data_formatata}", ""],
+            ["", ""],
+            [f"Furnizor: {factura.furnizor.nume}", cell_chit]
+        ]
 
-    tabel_chitanta = Table(data_chitanta, colWidths=[350, 150])
-    tabel_chitanta.setStyle(TableStyle([
-        ('BOX', (0, 0), (-1, -1), 1, colors.black),
-        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 8),
-        ('SPAN', (0, 0), (1, 0)),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
-        ('LEFTPADDING', (0, 0), (-1, -1), 1),
-        ('ALIGN', (0, 0), (1, 0), 'CENTER'),
-        ('ALIGN', (1, -1), (1, -1), 'CENTER'),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-    ]))
+        tabel_chitanta = Table(data_chitanta, colWidths=[350, 150])
+        tabel_chitanta.setStyle(TableStyle([
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('SPAN', (0, 0), (1, 0)),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
+            ('LEFTPADDING', (0, 0), (-1, -1), 1),
+            ('ALIGN', (0, 0), (1, 0), 'CENTER'),
+            ('ALIGN', (1, -1), (1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
 
-    elements.append(tabel_chitanta)
+        elements.append(tabel_chitanta)
 
     try:
         doc.build(elements)

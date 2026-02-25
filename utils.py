@@ -10,9 +10,10 @@ import messagebox
 from factura import Factura, Entitate, Produs
 # Import�m modulele tale existente pentru logic�
 from db import get_entitate_dupa_cui, cauta_firma_anaf, salveaza_factura_completa
-from pdf_generator2 import export_pdf 
+from pdf_generator2 import export_pdf
 from ubl_generator import export_xml_lxml
 from db import get_ultimul_numar_factura_client
+from db import get_ultimul_nr_chitanta
 
 def procesare_valoare_numerica(valoare_str):
 	"""
@@ -79,6 +80,7 @@ def generare_fisiere_factura(date_furnizor, date_client, date_factura, lista_pro
 	"""
 	Coordoneaz� crearea obiectelor, salvarea �n DB ?i generarea PDF/XML.
 	"""
+
 	# 1. Creare directoare
 	output_dir = "facturi"
 	if not os.path.exists(output_dir):
@@ -91,12 +93,15 @@ def generare_fisiere_factura(date_furnizor, date_client, date_factura, lista_pro
 	furnizor = Entitate(**date_furnizor)
 	client = Entitate(**date_client)
 
+
 	factura = Factura(
 		numar=date_factura['numar'],
 		data=date_factura['data'],
 		furnizor=furnizor,
 		client=client,
-		produse=lista_produse
+		produse=lista_produse,
+		nr_chit=date_factura['nr_chit'],
+		cu_chitanta=date_factura['vrea_chitanta']
 	)
 
 	# 3. Salvare DB
@@ -125,6 +130,13 @@ def sugereaza_urmatorul_numar(client_cui):
 		return str(ultimul_nr + 1)
 	else:
 		return "1"
+
+def sugereaza_nr_chitanta():
+	ultimul_nr_chit = get_ultimul_nr_chitanta()
+	if ultimul_nr_chit is not None:
+		return str(ultimul_nr_chit + 1)
+	else:
+		return "0"
 
 
 def genereaza_pdf_din_db(numar_factura):
@@ -183,9 +195,9 @@ def genereaza_pdf_din_db(numar_factura):
 						adresa=row['cl_adr'], localitate=row['cl_loc'],
 						judet=row['cl_jud'], tara=row['cl_tara'], banca=row['cl_bnc'], iban=row['cl_iban'],
 						   banca1=row['cl_banc1'], iban1=row['cl_iban1'])
+		factura_obj = Factura(numar=row['numar'], data=row['data'], nr_chit=row['nr_chit'],
+								  furnizor=furnizori, client=clienti)
 
-		factura_obj = Factura(numar=row['numar'], data=row['data'],
-							  furnizor=furnizori, client=clienti)
 
 		# 3. Adăugăm produsele (trebuie să ai un tabel 'produse_factura' sau similar)
 		c.execute("SELECT * FROM produse_facturi WHERE factura_id = ?", (row['id'],))

@@ -170,7 +170,7 @@ def export_pdf(factura: Factura, filename="Factura.pdf"):
 
 # 2. Datele Chitanței
     data_chitanta = [
-        [Paragraph(f"<b>CHITANTA Nr. {factura.numar}</b>", style_titlu_factura), ""],
+        [Paragraph(f"<b>CHITANTA Nr. {factura.nr_chit}</b>", style_titlu_factura), ""],
         [f"Data: {data_formatata}", ""],
         [f"Am primit de la: {factura.client.nume}", ""],
         [f"Suma de: {factura.total_general()} RON", f"CUI: {factura.client.cui}"],

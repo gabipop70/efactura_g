@@ -1,6 +1,9 @@
 from dataclasses import dataclass, field
 from typing import List
 
+from sqlalchemy import true, false
+
+
 @dataclass
 class Entitate:
     nume: str
@@ -49,6 +52,9 @@ class Factura:
 
     def total_general(self):
         return self.total_fara_tva() + self.total_tva()
+
+    nr_chit: str = ""
+    cu_chitanta: bool = False
 
 def suma_in_litere(suma):
     # Liste cu cifre și zeci
