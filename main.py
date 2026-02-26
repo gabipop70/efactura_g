@@ -1,8 +1,8 @@
 import tkinter as tk
-from gui import AplicatieFactura
+from meniu import AplicatieFacturi
 
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = AplicatieFactura(root)
+    app = AplicatieFacturi(root)
     root.mainloop()
