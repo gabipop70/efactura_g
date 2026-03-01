@@ -5,7 +5,7 @@ import re
 from datetime import datetime
 
 from tqdm import tk
-import messagebox
+
 
 from factura import Factura, Entitate, Produs
 # Import�m modulele tale existente pentru logic�

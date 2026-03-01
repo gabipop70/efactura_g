@@ -98,16 +98,16 @@ def export_xml_lxml(factura: Factura, filename="Factura.xml"):
     tax_amt3.set("currencyID", "RON")
     tax_amt3.text = f"{factura.total_tva():.2f}"                                  # BT-117
 
-    cat = etree.SubElement(tax_sub, E("TaxCategory", "cac"))
+    tax = etree.SubElement(tax_sub, E("TaxCategory", "cac"))
     if tva_percent > 0:
-        etree.SubElement(cat, E("ID")).text = "S"
-        etree.SubElement(cat, E("Percent")).text = f"{tva_percent:.2f}"
+        etree.SubElement(tax, E("ID")).text = "S"
+        etree.SubElement(tax, E("Percent")).text = f"{tva_percent:.2f}"
     else:
-        etree.SubElement(cat, E("ID")).text ="E"                                            # BT-118
-        etree.SubElement(cat, E("Percent")).text = "0.00"                                      # BT-119
-        etree.SubElement(cat, E("TaxExemptionReasonCode")).text = "VATEX-EU-O"              # BT-120
-        etree.SubElement(cat, E("TaxExemptionReason")).text = "Neimpozabil conform art. 292 Cod Fiscal"  # BT-121
-    scheme1 = etree.SubElement(cat, E("TaxScheme", "cac"))
+        etree.SubElement(tax, E("ID")).text ="E"                                            # BT-118
+        etree.SubElement(tax, E("Percent")).text = "0.00"                                      # BT-119
+        etree.SubElement(tax, E("TaxExemptionReasonCode")).text = "VATEX-EU-O"              # BT-120
+        etree.SubElement(tax, E("TaxExemptionReason")).text = "Neimpozabil conform art. 292 Cod Fiscal"  # BT-121
+    scheme1 = etree.SubElement(tax, E("TaxScheme", "cac"))
     etree.SubElement(scheme1, E("ID")).text = "VAT"
   #  etree.SubElement(scheme, E("ID")).text = "VAT"
     # === [BG-24] Totaluri Factura ===
@@ -135,11 +135,17 @@ def export_xml_lxml(factura: Factura, filename="Factura.xml"):
 
         # TVA - NEPLĂTITOR ("O")
         tax = etree.SubElement(item, E("ClassifiedTaxCategory", "cac"))
-        etree.SubElement(tax, E("ID")).text = "E" 
-        etree.SubElement(tax, E("Percent")).text = "0.00"                                # BT-151
+        if tva_percent > 0:
+            etree.SubElement(tax, E("ID")).text = "S"
+            etree.SubElement(tax, E("Percent")).text = f"{tva_percent:.2f}"
+        else:
+            etree.SubElement(tax, E("ID")).text = "E"
+            etree.SubElement(tax, E("Percent")).text = "0.00"                                # BT-151
+            scheme = etree.SubElement(tax, E("TaxScheme", "cac"))
+            etree.SubElement(scheme, E("ID")).text = "VAT"
         scheme = etree.SubElement(tax, E("TaxScheme", "cac"))
         etree.SubElement(scheme, E("ID")).text = "VAT"
-        
+
         price = etree.SubElement(line, E("Price", "cac"))
         price_amt = etree.SubElement(price, E("PriceAmount"))
         price_amt.set("currencyID", "RON")

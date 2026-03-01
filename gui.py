@@ -3,9 +3,8 @@ from datetime import datetime
 from tkinter import messagebox
 from tkinter import ttk
 
-import messagebox
 from matplotlib.sphinxext.plot_directive import align
-from tensorflow.python.framework.test_ops import none
+
 
 # Importam modulele locale
 from db import get_unitati_text_format, creare_tabele, populate_unitati_default, cauta_facturi_dupa_cui
