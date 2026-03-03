@@ -314,7 +314,6 @@ def cauta_firma_anaf(cui):
         return None
 
 def get_ultimul_numar_factura_furnizor(furnizori_cui):
-        print("cui_furnizor:", furnizori_cui)
         import sqlite3
         conn = sqlite3.connect('efactura.db')
         cursor = conn.cursor()
@@ -369,7 +368,7 @@ def cauta_facturi_dupa_cui(cui_furnizor, cui_client=None):
     conn.close()
     return [dict(row) for row in rows]
 
-def get_ultimul_nr_chitanta():
+def get_ultimul_nr_chitanta(furnizori_cui):
         import sqlite3
         conn = sqlite3.connect('efactura.db')
         cursor = conn.cursor()
@@ -377,8 +376,10 @@ def get_ultimul_nr_chitanta():
             query = """
                     SELECT MAX(CAST(f.nr_chit AS INTEGER))
                     FROM facturi f
+                             JOIN furnizori fr ON f.furnizor_id = fr.id
+                    WHERE fr.cui = ?
                     """
-            cursor.execute(query)
+            cursor.execute(query,(furnizori_cui,))
             result = cursor.fetchone()
             conn.close()
             if result and result[0] is not None:

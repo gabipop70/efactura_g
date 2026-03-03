@@ -123,7 +123,6 @@ def generare_fisiere_factura(date_furnizor, date_client, date_factura, lista_pro
 	return path_pdf, path_xml
 
 def sugereaza_urmatorul_numar(furnizori_cui):
-	print("cui_furnizor:", furnizori_cui)
 	if not furnizori_cui:
 		return ""
 	ultimul_nr = get_ultimul_numar_factura_furnizor(furnizori_cui)
@@ -132,8 +131,10 @@ def sugereaza_urmatorul_numar(furnizori_cui):
 	else:
 		return "1"
 
-def sugereaza_nr_chitanta():
-	ultimul_nr_chit = get_ultimul_nr_chitanta()
+def sugereaza_nr_chitanta(furnizori_cui):
+	if not furnizori_cui:
+		return ""
+	ultimul_nr_chit = get_ultimul_nr_chitanta(furnizori_cui)
 	if ultimul_nr_chit is not None:
 		return str(ultimul_nr_chit + 1)
 	else:

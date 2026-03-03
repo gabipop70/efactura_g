@@ -226,7 +226,8 @@ class AplicatieFacturi:
         if self.vrea_chitanta_var.get():
             self.entry_nr_chitanta.config(state="normal")
             # Sugerăm automat un număr de chitanță când se bifează
-            nr_sugerat = sugereaza_nr_chitanta()
+            cui = self.furnizor_cui.get()
+            nr_sugerat = sugereaza_nr_chitanta(cui)
             if nr_sugerat:
                 self.entry_nr_chitanta.delete(0, tk.END)
                 self.entry_nr_chitanta.insert(0, nr_sugerat)
@@ -325,6 +326,7 @@ class AplicatieFacturi:
     def actiune_cauta_entitate(self, tip):
         # 1. Configurare dinamică în funcție de tip
         if tip == "furnizor":
+
             cui = self.furnizor_cui.get()
             tabel = "furnizori"
             # Folosim prefixul pentru a construi referințele la atribute dinamic sau manual
@@ -529,5 +531,8 @@ class AplicatieFacturi:
         # Butoanele sunt la același nivel cu definițiile funcțiilor de mai sus
         tk.Button(search_subframe, text="Caută", command=executa_cautare).grid(row=2, column=0, columnspan=2, pady=5)
         tk.Button(search_subframe, text="Listează factura", command=action_listeaza).grid(row=4, column=0, columnspan=2, pady=5)
+
+    def destroy(self):
+        pass
         
     
