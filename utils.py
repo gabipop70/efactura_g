@@ -12,7 +12,7 @@ from factura import Factura, Entitate, Produs
 from db import get_entitate_dupa_cui, cauta_firma_anaf, salveaza_factura_completa
 from pdf_generator2 import export_pdf
 from ubl_generator import export_xml_lxml
-from db import get_ultimul_numar_factura_client
+from db import get_ultimul_numar_factura_furnizor
 from db import get_ultimul_nr_chitanta
 
 def procesare_valoare_numerica(valoare_str):
@@ -122,10 +122,11 @@ def generare_fisiere_factura(date_furnizor, date_client, date_factura, lista_pro
 
 	return path_pdf, path_xml
 
-def sugereaza_urmatorul_numar(client_cui):
-	if not client_cui:
+def sugereaza_urmatorul_numar(furnizori_cui):
+	print("cui_furnizor:", furnizori_cui)
+	if not furnizori_cui:
 		return ""
-	ultimul_nr = get_ultimul_numar_factura_client(client_cui)
+	ultimul_nr = get_ultimul_numar_factura_furnizor(furnizori_cui)
 	if ultimul_nr is not None:
 		return str(ultimul_nr + 1)
 	else:

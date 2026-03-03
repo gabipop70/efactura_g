@@ -313,7 +313,8 @@ def cauta_firma_anaf(cui):
         print("Eroare la interogare ANAF:", e)
         return None
 
-def get_ultimul_numar_factura_client(client_cui):
+def get_ultimul_numar_factura_furnizor(furnizori_cui):
+        print("cui_furnizor:", furnizori_cui)
         import sqlite3
         conn = sqlite3.connect('efactura.db')
         cursor = conn.cursor()
@@ -321,11 +322,12 @@ def get_ultimul_numar_factura_client(client_cui):
             query = """
                     SELECT MAX(CAST(f.numar AS INTEGER))
                     FROM facturi f
-                             JOIN clienti c ON f.client_id = c.id
-                    WHERE c.cui = ?
+                             JOIN furnizori fr ON f.furnizor_id = fr.id
+                    WHERE fr.cui = ?
                     """
-            cursor.execute(query, (client_cui,))
+            cursor.execute(query, (furnizori_cui,))
             result = cursor.fetchone()
+            print("Rezultat:", result)
             conn.close()
             if result and result[0] is not None:
                 return int(result[0])

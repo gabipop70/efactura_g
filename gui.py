@@ -247,8 +247,9 @@ class AplicatieFactura:
 
     def actiune_cauta_entitate(self, tip):
         # 1. Configurare dinamică în funcție de tip
+
         if tip == "furnizor":
-            cui = self.furnizor_cui.get()
+            cui= self.furnizor_cui.get()
             tabel = "furnizori"
             # Folosim prefixul pentru a construi referințele la atribute dinamic sau manual
             fields = {
@@ -257,6 +258,7 @@ class AplicatieFactura:
                 'banca': self.furnizor_banca, 'iban': self.furnizor_iban,
                 'banca1': self.furnizor_banca1, 'iban1': self.furnizor_iban1
             }
+
         else:
             cui = self.client_cui.get()
             tabel = "clienti"
@@ -267,7 +269,7 @@ class AplicatieFactura:
                 'banca1': self.client_banca1, 'iban1': self.client_iban1
             }
 
-        # 2. Validare minimă
+    # 2. Validare minimă
         if not cui:
             print("Introduceți un CUI pentru căutare.")
             return
@@ -277,11 +279,13 @@ class AplicatieFactura:
         self.master.update()
 
         try:
+            print("cui",cui)
             date_firma = utils.logic_cauta_entitate(cui, tabel)
 
             # 4. Actualizare UI dacă avem date
             if date_firma:
                 print(f"Firma găsită în: {date_firma.get('sursa')}")
+                print(f"Sugerez număr pentru furnizor:", tip)
                 for key, widget in fields.items():
                     val = date_firma.get(key, "")
                     widget.delete(0, "end")
@@ -289,7 +293,8 @@ class AplicatieFactura:
                         widget.insert(0, str(val))
 
                 # 5. Logică specifică pentru client (Număr Factură)
-                if tip == "client":
+                if tip == "furnizor":
+                    print("Sugerez număr pentru furnizor:", cui)
                     nr_sugerat = utils.sugereaza_urmatorul_numar(cui)
                     if nr_sugerat:
                         self.numar_entry.delete(0, "end")

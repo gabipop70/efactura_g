@@ -366,7 +366,7 @@ class AplicatieFacturi:
                         widget.insert(0, str(val))
 
                 # 5. Logică specifică pentru client (Număr Factură)
-                if tip == "client":
+                if tip == "furnizor":
                     nr_sugerat = utils.sugereaza_urmatorul_numar(cui)
                     if nr_sugerat:
                         self.numar_entry.delete(0, "end")
