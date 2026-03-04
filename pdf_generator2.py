@@ -40,6 +40,7 @@ def export_pdf(factura: Factura, filename="Factura.pdf"):
     # --- HEADER TABLES (Furnizor, Info, Client) ---
     data_info = [
         [Paragraph("<b>FACTURA</b>", style_titlu_factura)],
+        ['SERIE FACTURA:', factura.furnizor.ser_fac],
         ['NR. FACTURA:', factura.numar],
         ['DATA:', data_formatata],
     ]

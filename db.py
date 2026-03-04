@@ -27,7 +27,8 @@ def creare_tabele():
         banca TEXT,
         iban TEXT,
         banca1 TEXT,
-        iban1 TEXT
+        iban1 TEXT,
+        ser_fac TEXT
     )''')
 
     # Clienți
@@ -136,8 +137,8 @@ def adauga_entitate(tabela: str, entitate: Entitate) -> int:
         c.execute(f'''
             INSERT INTO {tabela}
               (nume, cui, onrc, adresa, tara,
-               iban, localitate, judet, banca, banca1, iban1)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               iban, localitate, judet, banca, banca1, iban1, ser_fac)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             entitate.nume,
             entitate.cui,
@@ -149,7 +150,8 @@ def adauga_entitate(tabela: str, entitate: Entitate) -> int:
             entitate.judet,
             entitate.banca,
             entitate.banca1,
-            entitate.iban1
+            entitate.iban1,
+            entitate.ser_fac
         ))
         entitate_id = c.lastrowid
 
@@ -217,7 +219,7 @@ def get_entitate_dupa_cui(tabela: str, cui: str) -> dict | None:
 
     c.execute(f'''
         SELECT nume, cui, onrc, adresa, tara,
-               iban, localitate, judet, banca, banca1, iban1
+               iban, localitate, judet, banca, banca1, iban1, ser_fac
         FROM {tabela}
         WHERE cui = ?
     ''', (cui,))
@@ -241,6 +243,7 @@ def get_entitate_dupa_cui(tabela: str, cui: str) -> dict | None:
         "iban":       row["iban"],
         "banca1":     row["banca1"],
         "iban1":      row["iban1"],
+        "ser_fac":    row["ser_fac"],
     }
 
 def format_data_ro(data_input):
@@ -353,6 +356,7 @@ def cauta_facturi_dupa_cui(cui_furnizor, cui_client=None):
             c.id AS id_c,
             fr.nume AS nume_furnizor,
             fr.cui AS cui_furnizor,
+            fr.ser_fac,
             fr.id AS id_f,
             f.total_general,
             f.nr_chit

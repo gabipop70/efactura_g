@@ -17,6 +17,7 @@ class Entitate:
     iban: str
     banca1: str
     iban1: str
+    ser_fac: str = ""
 
 @dataclass
 class Produs:

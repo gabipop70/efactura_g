@@ -148,7 +148,8 @@ class AplicatieFacturi:
 
         # === DETALII FACTURA ===
         tk.Label(self.pagina_generare, text="🧾 Detalii factura", font="bold", bg="#e0f7fa").grid(row=10, column=2, columnspan=3)
-        self.numar_entry = self._entry(p,"Număr", 11, 2)
+        self.ser_fac_entry = self._entry(p,"Serie factura", 11, 1)
+        self.numar_entry = self._entry(p,"Număr factura", 11, 2)
         self.data_entry = self._entry(p,"Data", 12, 2, default=datetime.now().strftime("%Y-%m-%d"))
 
         # === PRODUSE ===
@@ -334,7 +335,7 @@ class AplicatieFacturi:
                 'nume': self.furnizor_nume, 'onrc': self.furnizor_onrc, 'adresa': self.furnizor_adresa,
                 'localitate': self.furnizor_localitate, 'judet': self.furnizor_judet, 'tara': self.furnizor_tara,
                 'banca': self.furnizor_banca, 'iban': self.furnizor_iban,
-                'banca1': self.furnizor_banca1, 'iban1': self.furnizor_iban1
+                'banca1': self.furnizor_banca1, 'iban1': self.furnizor_iban1, 'serie':self.ser_fac_entry
             }
         else:
             cui = self.client_cui.get()
@@ -373,6 +374,7 @@ class AplicatieFacturi:
                     if nr_sugerat:
                         self.numar_entry.delete(0, "end")
                         self.numar_entry.insert(0, nr_sugerat)
+                        self.ser_fac_entry.insert(0, date_firma['ser_fac'])
             else:
                 print("Firma nu a fost găsită.")
 
@@ -391,7 +393,7 @@ class AplicatieFacturi:
             'adresa': self.furnizor_adresa.get(), 'localitate': self.furnizor_localitate.get(),
             'judet': self.furnizor_judet.get(), 'tara': self.furnizor_tara.get(),
             'banca': self.furnizor_banca.get(), 'iban': self.furnizor_iban.get(),
-            'banca1': self.furnizor_banca1.get(), 'iban1': self.furnizor_iban1.get()
+            'banca1': self.furnizor_banca1.get(), 'iban1': self.furnizor_iban1.get(),'ser_fac': self.ser_fac_entry.get(),
         }
 
         d_client = {
@@ -403,6 +405,7 @@ class AplicatieFacturi:
         }
 
         d_factura = {
+
             'numar': self.numar_entry.get(),
             'data': self.data_entry.get(),
             'nr_chit': self.entry_nr_chitanta.get(),
@@ -439,7 +442,7 @@ class AplicatieFacturi:
             self.client_nume, self.client_cui, self.client_onrc, self.client_adresa,
             self.client_localitate, self.client_judet,
             self.client_banca, self.client_iban, self.client_banca1, self.client_iban1,
-            self.numar_entry, self.data_entry
+            self.ser_fac_entry, self.numar_entry, self.data_entry
         ]:
             entry.delete(0, tk.END)
             entry.config(state='normal')
@@ -533,6 +536,7 @@ class AplicatieFacturi:
         tk.Button(search_subframe, text="Listează factura", command=action_listeaza).grid(row=4, column=0, columnspan=2, pady=5)
 
     def destroy(self):
+        self.arata_pagina(self.pagina_start)
         pass
         
     

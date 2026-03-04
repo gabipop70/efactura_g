@@ -163,6 +163,7 @@ def genereaza_pdf_din_db(numar_factura):
 						 fr.iban       as fr_iban,
 						 fr.banca1	   as fr_banc1,
 						 fr.iban1      as fr_iban1,
+						 fr.ser_fac		as fr_ser_fac,
 						 cl.nume       as cl_nume,
 						 cl.cui        as cl_cui,
 						 cl.onrc       as cl_onrc,
@@ -191,7 +192,7 @@ def genereaza_pdf_din_db(numar_factura):
 		furnizori = Entitate(nume=row['fr_nume'], cui=row['fr_cui'], onrc=row['fr_onrc'],
 							adresa=row['fr_adr'], localitate=row['fr_loc'],
 							judet=row['fr_jud'], tara=row['fr_tara'], banca=row['fr_bnc'], iban=row['fr_iban'],
-							 banca1=row['fr_banc1'], iban1=row['fr_iban1'])
+							 banca1=row['fr_banc1'], iban1=row['fr_iban1'], ser_fac=row['fr_ser_fac'],)
 
 		clienti = Entitate(nume=row['cl_nume'], cui=row['cl_cui'], onrc=row['cl_onrc'],
 						adresa=row['cl_adr'], localitate=row['cl_loc'],
