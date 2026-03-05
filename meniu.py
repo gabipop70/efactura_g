@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkcalendar import DateEntry
 from datetime import datetime
 from tkinter import ttk, messagebox
 from db import get_unitati_text_format, creare_tabele, populate_unitati_default, cauta_facturi_dupa_cui
@@ -126,6 +127,7 @@ class AplicatieFacturi:
         self.furnizor_iban1 = self._entry(p,"IBAN 2", 6, 1)
 
         # Bind Event FocusOut pentru cautare automata
+        self.furnizor_cui.bind("<FocusIn>", lambda e: self.resetare_campuri())
         self.furnizor_cui.bind("<FocusOut>", lambda e: self.actiune_cauta_entitate("furnizor"))
 
         # === CLIENT === (Similar layout ca la furnizor)
@@ -150,7 +152,10 @@ class AplicatieFacturi:
         tk.Label(self.pagina_generare, text="🧾 Detalii factura", font="bold", bg="#e0f7fa").grid(row=10, column=2, columnspan=3)
         self.ser_fac_entry = self._entry(p,"Serie factura", 11, 1)
         self.numar_entry = self._entry(p,"Număr factura", 11, 2)
+        # self.data_entry = DateEntry(self.master, date_pattern='yyyy-mm-dd')
         self.data_entry = self._entry(p,"Data", 12, 2, default=datetime.now().strftime("%Y-%m-%d"))
+        # self.data_entry = DateEntry(self.master, date_pattern='yyyy-mm-dd')
+        # self.data_entry.grid(row=12, column=3, sticky="w")
 
         # === PRODUSE ===
         # ... (Codul tau de layout produse ramane la fel) ...
@@ -454,6 +459,8 @@ class AplicatieFacturi:
         self.produs_pret.insert(0, "0.00")
         self.produs_tva.delete(0, tk.END)
         self.produs_tva.insert(0, "0")
+
+        self.listbox.delete(0, tk.END)
 
         header = f"{'     Produs':<33} | {'Cant.':<5} | {'Preț Unitar':<12} | {'TVA %':<6} | {'Total fara TVA':<12} | {'Total cu TVA': <12}"
         separator = "------------------------------------------------------------------------------------------------------"

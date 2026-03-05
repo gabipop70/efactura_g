@@ -107,6 +107,7 @@ def export_xml_lxml(factura: Factura, filename="Factura.xml"):
         etree.SubElement(tax, E("Percent")).text = "0.00"                                      # BT-119
         etree.SubElement(tax, E("TaxExemptionReasonCode")).text = "VATEX-EU-O"              # BT-120
         etree.SubElement(tax, E("TaxExemptionReason")).text = "Neimpozabil conform art. 292 Cod Fiscal"  # BT-121
+
     scheme1 = etree.SubElement(tax, E("TaxScheme", "cac"))
     etree.SubElement(scheme1, E("ID")).text = "VAT"
   #  etree.SubElement(scheme, E("ID")).text = "VAT"
@@ -141,8 +142,9 @@ def export_xml_lxml(factura: Factura, filename="Factura.xml"):
         else:
             etree.SubElement(tax, E("ID")).text = "E"
             etree.SubElement(tax, E("Percent")).text = "0.00"                                # BT-151
-            scheme = etree.SubElement(tax, E("TaxScheme", "cac"))
-            etree.SubElement(scheme, E("ID")).text = "VAT"
+            # scheme = etree.SubElement(tax, E("TaxScheme", "cac"))
+            # etree.SubElement(scheme, E("ID")).text = "VAT"
+
         scheme = etree.SubElement(tax, E("TaxScheme", "cac"))
         etree.SubElement(scheme, E("ID")).text = "VAT"
 

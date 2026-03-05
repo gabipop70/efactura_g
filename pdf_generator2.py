@@ -50,7 +50,9 @@ def export_pdf(factura: Factura, filename="Factura.pdf"):
         ('FONTSIZE', (0, 0), (-1, -1), 8),
         ('ALIGN', (0, 0), (0, -1), 'LEFT'),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ('TEXTCOLOR', (0, 0), (0, -1), colors.grey),
+        ('TOPPADDING', (0, 0), (-1, -1), 1),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
     ]))
 
