@@ -45,7 +45,8 @@ def creare_tabele():
         banca TEXT,
         iban TEXT,
         banca1 TEXT,
-        iban1 TEXT
+        iban1 TEXT,
+        ser_fac TEXT
     )''')
 
     # Facturi
@@ -208,7 +209,8 @@ def salveaza_factura_completa(
 
 
 
-def get_entitate_dupa_cui(tabela: str, cui: str) -> dict | None:
+def \
+        get_entitate_dupa_cui(tabela: str, cui: str) -> dict | None:
     """
     Returnează un dict cu valorile (cheie = denumire coloană),
     sau None dacă nu găsește nimic.
@@ -274,7 +276,7 @@ def format_data_ro(data_input):
             return data_str # Returnăm originalul dacă nu recunoaștem formatul
 
 def cauta_firma_anaf(cui):
-    url = "https://webservicesp.anaf.ro/PlatitorTvaRest/api/v3/ws/tva"
+    url = "https://webserviceanaf.ro/api/v6/ws/tva"
     data = {
         "cui": [
             {
@@ -315,6 +317,44 @@ def cauta_firma_anaf(cui):
     except Exception as e:
         print("Eroare la interogare ANAF:", e)
         return None
+
+
+def cauta_firma_openapi(cui, api_key):
+    # OpenAPI acceptă CUI-ul direct în URL
+    url = f"https://api.openapi.ro/api/companies/{cui}"
+
+    headers = {
+        "x-api-key": api_key
+    }
+
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+
+        # Verificăm dacă cererea a fost de succes
+        if response.status_code == 200:
+            date = response.json()
+            print(f"--- Date pentru {date.get('denumire')} ---")
+            print(f"CUI: {date.get('cif')}")
+            print(f"Reg. Com: {date.get('numar_reg_com')}")
+            print(f"Adresă: {date.get('adresa')}")
+            print(f"Plătitor TVA: {'DA' if date.get('vat_status') else 'NU'}")
+            return date
+
+        elif response.status_code == 404:
+            print("Eroare: CUI-ul introdus nu a fost găsit.")
+        elif response.status_code == 401:
+            print("Eroare: Cheia API este invalidă.")
+        elif response.status_code == 429:
+            print("Eroare: Ai depășit limita de cereri pe luna aceasta.")
+        else:
+            print(f"Eroare neașteptată: {response.status_code}")
+
+    except requests.exceptions.Timeout:
+        print("Eroare: Serverul OpenAPI nu a răspuns în timp util.")
+    except requests.exceptions.RequestException as e:
+        print(f"Eroare de conexiune: {e}")
+
+    return None
 
 def get_ultimul_numar_factura_furnizor(furnizori_cui):
         import sqlite3

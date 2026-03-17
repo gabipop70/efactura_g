@@ -4,7 +4,7 @@ from datetime import datetime
 from tkinter import ttk, messagebox
 from db import get_unitati_text_format, creare_tabele, populate_unitati_default, cauta_facturi_dupa_cui
 import utils
-from utils import centreaza_fereastra, sugereaza_nr_chitanta
+from utils import centreaza_fereastra, sugereaza_nr_chitanta, validare_cui, validare_cnp
 
 class AplicatieFacturi:
     def __init__(self, master):
@@ -127,6 +127,7 @@ class AplicatieFacturi:
         self.furnizor_iban1 = self._entry(p,"IBAN 2", 6, 1)
 
         # Bind Event FocusOut pentru cautare automata
+
         self.furnizor_cui.bind("<FocusIn>", lambda e: self.resetare_campuri())
         self.furnizor_cui.bind("<FocusOut>", lambda e: self.actiune_cauta_entitate("furnizor"))
 
@@ -189,7 +190,7 @@ class AplicatieFacturi:
 
         self.listbox = tk.Listbox(self.pagina_generare, width=100, height=10, font=("Consolas", 10))
         self.listbox.grid(row=17, column=1, columnspan=6)
-        header = f"{'     Produs':<33} | {'Cant.':<5} | {'Preț Unitar':<12} | {'TVA %':<6} | {'Total fara TVA':<12} | {'Total cu TVA': <12}"
+        header = f"{'     Produs':<40} | {'Cant.':<5} | {'Preț Unitar':<12} | {'TVA %':<6} | {'Total fara TVA':<12} | {'Total cu TVA': <12}"
         separator = "------------------------------------------------------------------------------------------------------"
         self.listbox.insert(tk.END, header)
         self.listbox.insert(tk.END, separator)
@@ -331,6 +332,13 @@ class AplicatieFacturi:
 
     def actiune_cauta_entitate(self, tip):
         # 1. Configurare dinamică în funcție de tip
+        cui = self.furnizor_cui.get()
+        valid, mesaj = validare_cui(cui)
+        if not valid:
+            messagebox.showerror("Eroare CUI", mesaj)
+            self.furnizor_cui.focus_set()
+            return
+
         if tip == "furnizor":
 
             cui = self.furnizor_cui.get()
@@ -541,6 +549,8 @@ class AplicatieFacturi:
         # Butoanele sunt la același nivel cu definițiile funcțiilor de mai sus
         tk.Button(search_subframe, text="Caută", command=executa_cautare).grid(row=2, column=0, columnspan=2, pady=5)
         tk.Button(search_subframe, text="Listează factura", command=action_listeaza).grid(row=4, column=0, columnspan=2, pady=5)
+
+
 
     def destroy(self):
         self.arata_pagina(self.pagina_start)
