@@ -74,23 +74,24 @@ def logic_cauta_entitate(cui, tip_entitate="furnizori"):
             if rezultat:
                 # IMPORTANT: 'rezultat' este deja un dicționar.
                 # Trebuie să mapăm câmpurile de la OpenAPI pe structura ta din DB.
-                adresa_reala = rezultat.get('adresa',[])
-                loc = extrage_localitate(adresa_reala)
+                adresa_reala = rezultat.get('adresa')
+                print('Adresa reala', adresa_reala)
+                adresa_fara_localitate, loc = proceseaza_adresa_si_localitate(adresa_reala)
 
-                rest_adresa_lista = adresa_reala[:-1]
+                #rest_adresa_lista = adresa_reala[:-1]
 
                 # 3. Unim restul elementelor într-un text curat
                 # Rezultat: "STR. PRINCIPALA, 307, -"
-                adresa_fara_localitate = ", ".join(rest_adresa_lista).strip().upper()
+               # adresa_fara_localitate = ", ".join(rest_adresa_lista).strip().upper()
 
                 # Dacă la final a rămas o virgulă sau un cratimă izolată, o putem curăța
-                adresa_fara_localitate = adresa_fara_localitate.rstrip(', -')
+                #adresa_fara_localitate = adresa_fara_localitate.rstrip(', -')
 
-                print('test1', adresa_reala,' ',loc)
+                print('Adresa', adresa_fara_localitate,'Localitate ',loc)
                 entitate = {
                     'cui': rezultat.get('cif'),
                     'nume': str(rezultat.get('denumire')).upper(),
-                    'adresa': str(rest_adresa_lista).upper(),
+                    'adresa': str(adresa_fara_localitate).upper(),
                     'localitate': str(loc).upper(),
                     'platitor_tva': rezultat.get('vat_status'),
                     'onrc': rezultat.get('numar_reg_com'),
@@ -315,3 +316,31 @@ def extrage_localitate(text_adresa):
     #localitate = str(parti).split(',')[-1]
 
     return localitate
+
+
+def proceseaza_adresa_si_localitate(date_input):
+    # 1. Dacă date_input este String, îl tăiem după virgulă să facem o listă
+    if isinstance(date_input, str):
+        # Transformăm "Strada X, Nr 1, Rebrisoara" -> ["Strada X", "Nr 1", "Rebrisoara"]
+        lista = [item.strip() for item in date_input.split(',')]
+    elif isinstance(date_input, list):
+        lista = date_input
+    else:
+        return "", ""
+
+    if not lista:
+        return "", ""
+
+    # 2. Extragem localitatea (ultimul element)
+    localitate = str(lista[-1]).strip().upper()
+
+    # 3. Luăm restul elementelor (totul până la penultimul)
+    rest_elemente = [str(item).strip().upper() for item in lista[:-1]]
+
+    # 4. Filtrăm elementele care sunt doar cratime sau goale
+    elemente_valide = [e for e in rest_elemente if e and e != '-']
+
+    # 5. Unim restul pentru a forma adresa curată
+    adresa_fara_localitate = ", ".join(elemente_valide)
+
+    return adresa_fara_localitate, localitate
