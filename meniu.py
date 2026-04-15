@@ -513,13 +513,13 @@ class AplicatieFacturi:
             listbox.delete(0, tk.END)
 
             if rezultate:
-                header = f"{'Număr':<10} | {'Data':<15} | {'Client':<40} | {'Total':<15}"
+                header = f"{'Număr':<10} | {'Data':<15} | {'Client':<40} | {'Total':>10}"
                 listbox.insert(tk.END, header)
-                listbox.insert(tk.END, "-" * 80)
+                listbox.insert(tk.END, "-" * 85)
                 for factura in rezultate:
                     listbox.insert(
                         tk.END,
-                        f"{factura['numar']:<10} | {factura['data']:<15} | {factura['nume_client']:<40} | {factura['total_general']:<15}"
+                        f"{factura['numar']:<10} | {factura['data']:<15} | {factura['nume_client']:<40} | {factura['total_general']:>10}"
                     )
             else:
                 listbox.insert(tk.END, "Nu s-au găsit facturi.")

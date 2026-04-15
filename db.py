@@ -405,7 +405,7 @@ def cauta_facturi_dupa_cui(cui_furnizor, cui_client=None):
         JOIN clienti c ON f.client_id = c.id
         WHERE fr.cui = ?
             AND (? IS NULL OR c.cui = ?)
-        ORDER BY f.data DESC
+        ORDER BY f.numar DESC
     """, (cui_furnizor,cui_client,cui_client))
     rows = c.fetchall()
 
