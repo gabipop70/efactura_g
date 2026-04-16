@@ -1,6 +1,9 @@
 from datetime import datetime
 import sqlite3
 from wsgiref import headers
+
+from tqdm import tk
+
 from factura import Entitate, Factura, Produs
 import requests
 
@@ -435,3 +438,40 @@ def get_ultimul_nr_chitanta(furnizori_cui):
             except:
                 pass
             return None
+
+def cauta_in_tabel(tabel, camp_denumire, text, campuri_returnate=None, limit=20):
+    """
+    tabel: numele tabelului (ex: 'clienti', 'furnizori')
+    camp_denumire: numele coloanei după care cauți (ex: 'denumire', 'nume')
+    text: textul de căutat
+    campuri_returnate: listă cu numele coloanelor de returnat (ex: ['id', 'denumire', 'cui', ...])
+    limit: câte rezultate să returneze maxim
+    """
+    conn = sqlite3.connect('efactura.db')
+    c = conn.cursor()
+    if campuri_returnate is None:
+        campuri_returnate = [camp_denumire]
+    campuri_sql = ', '.join(campuri_returnate)
+    sql = f"SELECT {campuri_sql} FROM {tabel} WHERE {camp_denumire} LIKE ? ORDER BY {camp_denumire} LIMIT ?"
+    c.execute(sql, ('%' + text + '%', limit))
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+def cauta_clienti(text):
+        return cauta_in_tabel(
+            tabel='clienti',
+            camp_denumire='nume',
+            text=text,
+            campuri_returnate=['cui', 'nume', 'onrc',  'localitate','adresa', 'judet', 'tara', 'banca',
+                               'iban', 'banca1', 'iban1']
+        )
+
+def cauta_furnizori(text):
+        return cauta_in_tabel(
+            tabel='furnizori',
+            camp_denumire='nume',
+            text=text,
+            campuri_returnate=['cui', 'nume', 'onrc',  'localitate','adresa', 'judet', 'tara', 'banca',
+                               'iban', 'banca1', 'iban1']
+        )

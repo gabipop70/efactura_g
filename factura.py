@@ -175,3 +175,59 @@ def suma_in_litere(suma):
 
     return text.strip()
 
+import tkinter as tk
+
+class AutoCompleteEntry:
+    def __init__(self, entry, search_callback, select_callback):
+        self.entry = entry
+        self.search_callback = search_callback
+        self.select_callback = select_callback
+        self.results = []
+
+        # Creează Toplevel pentru dropdown (invizibil la început)
+        self.dropdown = tk.Toplevel(entry)
+        self.dropdown.withdraw()
+        self.dropdown.overrideredirect(True)  # Fără border
+        self.dropdown.attributes("-topmost", True)
+
+        self.listbox = tk.Listbox(self.dropdown, width=40, height=5)
+        self.listbox.pack()
+
+        self.entry.bind("<KeyRelease>", self.on_keyrelease)
+        self.entry.bind("<FocusOut>", self.hide_dropdown)
+        self.listbox.bind("<<ListboxSelect>>", self.on_select)
+        self.listbox.bind("<FocusOut>", self.hide_dropdown)
+
+    def on_keyrelease(self, event=None):
+        text = self.entry.get().strip()
+        self.listbox.delete(0, tk.END)
+        if len(text) < 2:
+            self.hide_dropdown()
+            return
+        self.results = self.search_callback(text)
+        if self.results:
+            for item in self.results:
+                self.listbox.insert(tk.END, item[1])  # item[1] = denumire
+            self.show_dropdown()
+        else:
+            self.hide_dropdown()
+
+    def show_dropdown(self):
+        # Poziționează dropdown-ul sub Entry
+        x = self.entry.winfo_rootx()
+        y = self.entry.winfo_rooty() + self.entry.winfo_height()
+        self.dropdown.geometry(f"+{x}+{y}")
+        self.dropdown.deiconify()
+        self.dropdown.lift()
+
+    def hide_dropdown(self, event=None):
+        self.dropdown.withdraw()
+
+    def on_select(self, event=None):
+        selection = self.listbox.curselection()
+        if not selection:
+            return
+        index = selection[0]
+        result = self.results[index]
+        self.select_callback(result)
+        self.hide_dropdown()

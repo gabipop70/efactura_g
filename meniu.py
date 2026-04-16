@@ -1,10 +1,15 @@
 import tkinter as tk
+
+
 from tkcalendar import DateEntry
 from datetime import datetime
 from tkinter import ttk, messagebox
-from db import get_unitati_text_format, creare_tabele, populate_unitati_default, cauta_facturi_dupa_cui
+from db import get_unitati_text_format, creare_tabele, populate_unitati_default, cauta_facturi_dupa_cui, cauta_in_tabel, \
+    cauta_clienti, cauta_furnizori
+
 import utils
-from utils import centreaza_fereastra, sugereaza_nr_chitanta, validare_cui, validare_cnp
+from factura import AutoCompleteEntry
+from utils import centreaza_fereastra, sugereaza_nr_chitanta, validare_cui,validare_cnp
 
 class AplicatieFacturi:
     def __init__(self, master):
@@ -116,6 +121,11 @@ class AplicatieFacturi:
                                                                                                          columnspan=3)
         self.furnizor_cui = self._entry(p,"CUI", 1, 0)
         self.furnizor_nume = self._entry(p,"Denumire", 1, 1)
+        self.autocomplete_furnizor = AutoCompleteEntry(
+            entry=self.furnizor_nume,
+            search_callback=cauta_furnizori,
+            select_callback=self.completeaza_furnizor
+        )
         self.furnizor_onrc = self._entry(p,"ONRC", 2, 0)
         self.furnizor_adresa = self._entry2(p,"Adresă", 3, 0)
         self.furnizor_localitate = self._entry(p,"Localitate", 2, 1)
@@ -127,14 +137,22 @@ class AplicatieFacturi:
         self.furnizor_iban1 = self._entry(p,"IBAN 2", 6, 1)
 
         # Bind Event FocusOut pentru cautare automata
-
         self.furnizor_cui.bind("<FocusIn>", lambda e: self.resetare_campuri())
         self.furnizor_cui.bind("<FocusOut>", lambda e: self.actiune_cauta_entitate("furnizor"))
 
-        # === CLIENT === (Similar layout ca la furnizor)
+
+
+
+
+    # === CLIENT === (Similar layout ca la furnizor)
         tk.Label(self.pagina_generare, text="👤 Client", bg="#e0f7fa", font=("Arial", 11, "bold")).grid(row=0, column=3, columnspan=4)
         self.client_cui = self._entry(p,"CUI", 1, 3)
         self.client_nume = self._entry(p,"Denumire", 1, 4)
+        self.autocomplete_client = AutoCompleteEntry(
+            entry=self.client_nume,
+            search_callback=cauta_clienti,
+            select_callback=self.completeaza_client
+        )
         self.client_onrc = self._entry(p,"ONRC", 2, 3)
         self.client_adresa = self._entry2(p,"Adresă", 3, 3)
         self.client_localitate = self._entry(p,"Localitate", 2, 4)
@@ -145,7 +163,10 @@ class AplicatieFacturi:
         self.client_banca1 = self._entry(p,"Banca 2", 6, 3)
         self.client_iban1 = self._entry(p,"IBAN 2", 6, 4)
 
+
         self.client_cui.bind("<FocusOut>", lambda e: self.actiune_cauta_entitate("client"))
+       
+
 
         # === AICI ADAUGĂM GENERAREA AUTOMATĂ A NUMĂRULUI ===
 
@@ -331,8 +352,12 @@ class AplicatieFacturi:
             messagebox.showerror("Eroare", "Index invalid.")
 
     def actiune_cauta_entitate(self, tip):
+
         # 1. Configurare dinamică în funcție de tip
         cui = self.furnizor_cui.get()
+        if not cui:
+            print("Introduceți un CUI pentru căutare sau cautati dupa denumire.")
+            return
         valid, mesaj = validare_cui(cui)
         if not valid:
             messagebox.showerror("Eroare CUI", mesaj)
@@ -552,8 +577,66 @@ class AplicatieFacturi:
 
 
 
+    def completeaza_client(self, row):
+
+        # row = (id, denumire, cui, onrc, adresa, localitate, judet, tara, banca, iban, banca1, iban1)
+        self.client_cui.delete(0, tk.END)
+        self.client_cui.insert(0, row[0])
+        self.client_nume.delete(0, tk.END)
+        self.client_nume.insert(0, row[1])
+        self.client_onrc.delete(0, tk.END)
+        self.client_onrc.insert(0, row[2])
+        self.client_localitate.delete(0, tk.END)
+        self.client_localitate.insert(0, row[3])
+        self.client_adresa.delete(0, tk.END)
+        self.client_adresa.insert(0, row[4])
+        self.client_judet.delete(0, tk.END)
+        self.client_judet.insert(0, row[5])
+        self.client_tara.delete(0, tk.END)
+        self.client_tara.insert(0, row[6])
+        self.client_banca.delete(0, tk.END)
+        self.client_banca.insert(0, row[7])
+        self.client_iban.delete(0, tk.END)
+        self.client_iban.insert(0, row[8])
+        self.client_banca1.delete(0, tk.END)
+        self.client_banca1.insert(0, row[9])
+        self.client_iban1.delete(0, tk.END)
+        self.client_iban1.insert(0, row[10])
+        # Șterge lista după selectare
+        self.listbox.delete(0, tk.END) # ascunde lista după selectare
+        
+    def completeaza_furnizor(self, row):
+
+        self.furnizor_cui.delete(0, tk.END)
+        self.furnizor_cui.insert(0, row[0])
+        self.furnizor_nume.delete(0, tk.END)
+        self.furnizor_nume.insert(0, row[1])
+        self.furnizor_onrc.delete(0, tk.END)
+        self.furnizor_onrc.insert(0, row[2])
+        self.furnizor_localitate.delete(0, tk.END)
+        self.furnizor_localitate.insert(0, row[3])
+        self.furnizor_adresa.delete(0, tk.END)
+        self.furnizor_adresa.insert(0, row[4])
+        self.furnizor_judet.delete(0, tk.END)
+        self.furnizor_judet.insert(0, row[5])
+        self.furnizor_tara.delete(0, tk.END)
+        self.furnizor_tara.insert(0, row[6])
+        self.furnizor_banca.delete(0, tk.END)
+        self.furnizor_banca.insert(0, row[7])
+        self.furnizor_iban.delete(0, tk.END)
+        self.furnizor_iban.insert(0, row[8])
+        self.furnizor_banca1.delete(0, tk.END)
+        self.furnizor_banca1.insert(0, row[9])
+        self.furnizor_iban1.delete(0, tk.END)
+        self.furnizor_iban1.insert(0, row[10])
+        # Șterge lista după selectare
+        self.listbox.delete(0, tk.END)  # ascunde lista după selectare
+
+
     def destroy(self):
         self.arata_pagina(self.pagina_start)
         pass
+
+
         
     
