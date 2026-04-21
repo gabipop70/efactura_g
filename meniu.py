@@ -631,6 +631,14 @@ class AplicatieFacturi:
         self.furnizor_iban1.insert(0, row[10])
         # Șterge lista după selectare
         self.listbox.delete(0, tk.END)  # ascunde lista după selectare
+        cui = self.furnizor_cui.get()
+        nr_sugerat = utils.sugereaza_urmatorul_numar(cui)
+        tabel="furnizori"
+        date_firma = utils.logic_cauta_entitate(cui, tabel)
+        if nr_sugerat:
+                self.numar_entry.delete(0, "end")
+                self.numar_entry.insert(0, nr_sugerat)
+                self.ser_fac_entry.insert(0, date_firma['ser_fac'])
 
 
     def destroy(self):
