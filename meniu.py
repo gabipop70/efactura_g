@@ -507,35 +507,64 @@ class AplicatieFacturi:
 
         self.furnizor_cui.focus_set()
 
-
     def _setup_ui_cautare(self):
         frame = self.pagina_cautare
         tk.Label(frame, text="🔍 Căutare Istoric Facturi", font=("Arial", 14, "bold"), bg="#e0f7fa").pack(pady=10)
 
+        # Subframe pentru filtre
         search_subframe = tk.Frame(frame, bg="#e0f7fa")
-        search_subframe.pack(pady=5)
+        search_subframe.pack(pady=10, padx=20)
 
-        # UI Setup
-        tk.Label(search_subframe, text="CUI furnizor:").grid(row=0, column=0)
-        self.cui_entry = tk.Entry(search_subframe)
-        self.cui_entry.grid(row=0, column=1)
+        # --- RÂND 0: CUI FURNIZOR ---
+        tk.Label(search_subframe, text="CUI furnizor:", bg="#e0f7fa").grid(row=0, column=0, sticky="e", padx=5, pady=2)
+        self.cui_entry = tk.Entry(search_subframe, width=25)
+        self.cui_entry.grid(row=0, column=1, sticky="w", padx=5, pady=2)
 
-        tk.Label(search_subframe, text="CUI client:").grid(row=1, column=0)
-        cui_entryc = tk.Entry(search_subframe)
-        cui_entryc.grid(row=1, column=1)
+        # --- RÂND 1: CUI CLIENT ---
+        tk.Label(search_subframe, text="CUI client:", bg="#e0f7fa").grid(row=1, column=0, sticky="e", padx=5, pady=2)
+        cui_entryc = tk.Entry(search_subframe, width=25)
+        cui_entryc.grid(row=1, column=1, sticky="w", padx=5, pady=2)
 
-        # Listbox - Folosim font Monospace pentru a păstra coloanele aliniate
-        listbox = tk.Listbox(search_subframe, width=100, font=("Courier", 10))
-        listbox.grid(row=3, column=0, columnspan=2, pady=10)
+        # --- RÂND 2: SPAȚIATOR ---
+        tk.Label(search_subframe, text="", bg="#e0f7fa").grid(row=2, column=0)
+
+        # --- RÂND 3: ETICHETE DATE ---
+        tk.Label(search_subframe, text="Data început (AAAA-LL-ZZ):", bg="#e0f7fa", font=("Arial", 9, "italic")).grid(
+            row=3, column=0, sticky="s", padx=5)
+        tk.Label(search_subframe, text="Data sfârșit (AAAA-LL-ZZ):", bg="#e0f7fa", font=("Arial", 9, "italic")).grid(
+            row=3, column=1, sticky="s", padx=5)
+
+        # --- RÂND 4: CÂMPURI DATE (Aliniate pe același rând) ---
+        datai_entryc = tk.Entry(search_subframe, width=20, justify="center")
+        datai_entryc.grid(row=4, column=0, padx=5, pady=5)
+        # Punem o valoare default ca exemplu de format
+        datai_entryc.insert(0, "2026-01-01")
+
+        datas_entryc = tk.Entry(search_subframe, width=20, justify="center")
+        datas_entryc.grid(row=4, column=1, padx=5, pady=5)
+        datas_entryc.insert(0, datetime.now().strftime("%Y-%m-%d"))
+
+
+
+        # --- RÂND 6: LISTBOX ---
+        listbox = tk.Listbox(search_subframe, width=110, height=15, font=("Courier", 10))
+        listbox.grid(row=7, column=0, columnspan=2, pady=10)
 
         def executa_cautare():
             cui = self.cui_entry.get().strip()
             cui_c = cui_entryc.get().strip()
+            data_i = datai_entryc.get().strip()
+            data_s = datas_entryc.get().strip()
+
             if cui_c == "":
                 cui_c = None
+            if data_i == "": data_i = None
+            if data_s == "": data_s = None
 
-            rezultate = cauta_facturi_dupa_cui(cui, cui_c)
+
+            rezultate = cauta_facturi_dupa_cui(cui, cui_c, data_i, data_s)
             listbox.delete(0, tk.END)
+            suma_totala = sum(factura['total_general'] for factura in rezultate)
 
             if rezultate:
                 header = f"{'Număr':<10} | {'Data':<15} | {'Client':<40} | {'Total':>10}"
@@ -546,6 +575,8 @@ class AplicatieFacturi:
                         tk.END,
                         f"{factura['numar']:<10} | {factura['data']:<15} | {factura['nume_client']:<40} | {factura['total_general']:>10}"
                     )
+                listbox.insert(tk.END, "-" * 85)
+                listbox.insert(tk.END, f"{'TOTAL GENERAL:':<69} | {suma_totala:>10.2f} RON")
             else:
                 listbox.insert(tk.END, "Nu s-au găsit facturi.")
 
@@ -572,8 +603,9 @@ class AplicatieFacturi:
                 print(f"Eroare la listare: {e}")
 
         # Butoanele sunt la același nivel cu definițiile funcțiilor de mai sus
-        tk.Button(search_subframe, text="Caută", command=executa_cautare).grid(row=2, column=0, columnspan=2, pady=5)
-        tk.Button(search_subframe, text="Listează factura", command=action_listeaza).grid(row=4, column=0, columnspan=2, pady=5)
+                # --- RÂND 5: BUTON CĂUTARE ---
+        tk.Button(search_subframe, text="🔍 Caută Facturi", bg="#00897b", fg="white", font=("Arial", 10, "bold"), width=30, command=executa_cautare).grid(row=6, column=0, columnspan=2, pady=15)
+        tk.Button(search_subframe, text="Listează factura", command=action_listeaza).grid(row=8, column=0, columnspan=2, pady=5)
 
 
 

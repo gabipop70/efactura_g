@@ -384,34 +384,40 @@ def get_ultimul_numar_factura_furnizor(furnizori_cui):
                 pass
             return None
 
-def cauta_facturi_dupa_cui(cui_furnizor, cui_client=None):
+def cauta_facturi_dupa_cui(cui_furnizor, cui_client=None, data_start=None, data_end=None):
     import sqlite3
     conn = sqlite3.connect('efactura.db')
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
 
-    c.execute("""
-        SELECT
-            f.numar,
-            f.data,
-            c.nume AS nume_client,
-            c.cui AS cui_client,
-            c.id AS id_c,
-            fr.nume AS nume_furnizor,
-            fr.cui AS cui_furnizor,
-            fr.ser_fac,
-            fr.id AS id_f,
-            f.total_general,
-            f.nr_chit
-        FROM facturi f
-        JOIN furnizori fr ON f.furnizor_id = fr.id
-        JOIN clienti c ON f.client_id = c.id
-        WHERE fr.cui = ?
-            AND (? IS NULL OR c.cui = ?)
-        ORDER BY f.numar DESC
-    """, (cui_furnizor,cui_client,cui_client))
-    rows = c.fetchall()
+    # Construim query-ul dinamic
+    query = """
+            SELECT
+                f.numar, f.data, c.nume AS nume_client, c.cui AS cui_client,
+                fr.nume AS nume_furnizor, fr.cui AS cui_furnizor, f.total_general
+            FROM facturi f
+            JOIN furnizori fr ON f.furnizor_id = fr.id
+            JOIN clienti c ON f.client_id = c.id
+            WHERE fr.cui = ?
+        """
+    params = [cui_furnizor]
 
+    if cui_client:
+        query += " AND c.cui = ?"
+        params.append(cui_client)
+
+    if data_start:
+        query += " AND f.data >= ?"
+        params.append(data_start)
+
+    if data_end:
+        query += " AND f.data <= ?"
+        params.append(data_end)
+
+    query += " ORDER BY f.data DESC, f.numar DESC"
+
+    c.execute(query, params)
+    rows = c.fetchall()
     conn.close()
     return [dict(row) for row in rows]
 
