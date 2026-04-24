@@ -183,7 +183,7 @@ def sugereaza_nr_chitanta(furnizori_cui):
 
 def genereaza_pdf_din_db(numar_factura):
     import sqlite3
-    # Presupunem că clasele Factura, Furnizor, Client sunt importate
+    # clasele Factura, Furnizor, Client sunt importate
 
     with sqlite3.connect('efactura.db') as conn:
         conn.row_factory = sqlite3.Row
@@ -249,8 +249,24 @@ def genereaza_pdf_din_db(numar_factura):
                                              cantitate=p['cantitate'], pret_unitar=p['pret_unitar'],
                                              tva_percent=p['tva_percent']))
         output_dir = "facturi"
+        data_curata = str(row['data']).strip().replace(":", "-")
+
+        output_dir = "facturi"
+        nr_curat = str(row['numar']).strip().replace("/", "-")
+        data_curata = str(row['data']).strip().replace(":", "-")
+
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        # Construim numele fișierului folosind variabilele curățate
+        nume_pdf = f"Factura_{nr_curat}_{data_curata}.pdf"
+
+        # UTILIZĂM os.path.join pentru a evita eroarea de tip operand
+        cale_pdf = os.path.join(output_dir, nume_pdf)
+
+        print(f"DEBUG: Calea generată este: {cale_pdf}")  # Vez
         # 4. Apelăm funcția ta de export
-        export_pdf(factura_obj, f"{output_dir}/Factura_{row['numar']}_{row['data']}.pdf")
+        export_pdf(factura_obj, f"{output_dir}/Factura_{nr_curat}_{data_curata}.pdf")
         nume_fis = f"{output_dir}\Factura_{row['numar']}_{row['data']}.pdf"
         os.startfile(nume_fis)
 
