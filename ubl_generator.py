@@ -78,7 +78,41 @@ def export_xml_lxml(factura: Factura, filename="Factura.xml"):
     legal = etree.SubElement(party, E("PartyLegalEntity", "cac"))
     etree.SubElement(legal, E("RegistrationName")).text = factura.client.nume         # BT-44
     etree.SubElement(legal, E("CompanyID")).text = factura.client.cui                 # BT-47
-    
+
+    # === [BG-16] Instrucțiuni de plată ===
+    if factura.furnizor.iban:
+        payment_means = etree.SubElement(invoice, E("PaymentMeans", "cac"))
+
+        # BT-81: Codul modalității de plată (31 = Transfer credit)
+        etree.SubElement(payment_means, E("PaymentMeansCode")).text = "31"
+
+        # BT-83: Notă privind plata
+        etree.SubElement(payment_means, E("PaymentID")).text = f"Plata factura {factura.numar}"
+
+        # [BG-17] Detalii cont bancar
+        payee_account = etree.SubElement(payment_means, E("PayeeFinancialAccount", "cac"))
+
+        # BT-84: IBAN-ul furnizorului (OBLIGATORIU)
+        etree.SubElement(payee_account, E("ID")).text = factura.furnizor.iban
+
+        # NOTĂ: Am eliminat tag-ul FinancialInstitutionBranch/Name care genera eroarea UBL-CR-429.
+        # Numele băncii nu este permis în acest punct conform regulii de validare.
+    if factura.furnizor.iban1:
+        payment_means = etree.SubElement(invoice, E("PaymentMeans", "cac"))
+
+        # BT-81: Codul modalității de plată (31 = Transfer credit)
+        etree.SubElement(payment_means, E("PaymentMeansCode")).text = "31"
+
+        # BT-83: Notă privind plata
+        etree.SubElement(payment_means, E("PaymentID")).text = f"Plata factura {factura.numar}"
+
+        # [BG-17] Detalii cont bancar
+        payee_account = etree.SubElement(payment_means, E("PayeeFinancialAccount", "cac"))
+
+        # BT-84: IBAN-ul furnizorului (OBLIGATORIU)
+        etree.SubElement(payee_account, E("ID")).text = factura.furnizor.iban1
+
+
      # === [BG-23] TVA totală ===
     tax_total = etree.SubElement(invoice, E("TaxTotal", "cac"))
     tax_amt = etree.SubElement(tax_total, E("TaxAmount"))
