@@ -149,8 +149,9 @@ def generare_fisiere_factura(date_furnizor, date_client, date_factura, lista_pro
 
     # 4. Generare nume fi?ier
     # Cur�?�m numele pentru a fi valid �n sistemul de fi?iere
-    safe_nume = "".join([c for c in furnizor.nume if c.isalnum()])[:10]
-    nume_fisier_base = f"{output_dir}/Factura_{factura.numar}_{safe_nume}_{factura.data.replace('.','')}"
+    safe_numef = "".join([c for c in furnizor.nume if c.isalnum()])[:4]
+    safe_numec = "".join([c for c in client.nume if c.isalnum()])[:4]
+    nume_fisier_base = f"{output_dir}/Fac_{factura.numar}_{safe_numef}_{safe_numec}_{factura.data.replace('.','')}"
 
     # 5. Export
     path_pdf = f"{nume_fisier_base}.pdf"
