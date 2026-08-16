@@ -1,0 +1,55 @@
+@startuml packages
+set namespaceSeparator none
+package "eFactura_python" as eFactura_python {
+}
+package "eFactura_python.db" as eFactura_python.db {
+}
+package "eFactura_python.factura" as eFactura_python.factura {
+}
+package "eFactura_python.gui" as eFactura_python.gui {
+}
+package "eFactura_python.main" as eFactura_python.main {
+}
+package "eFactura_python.main_v" as eFactura_python.main_v {
+}
+package "eFactura_python.meniu" as eFactura_python.meniu {
+}
+package "eFactura_python.pdf_generator2" as eFactura_python.pdf_generator2 {
+}
+package "eFactura_python.pdf_generator2_v" as eFactura_python.pdf_generator2_v {
+}
+package "eFactura_python.pdf_generator_no_tva" as eFactura_python.pdf_generator_no_tva {
+}
+package "eFactura_python.ubl_generator" as eFactura_python.ubl_generator {
+}
+package "eFactura_python.ubl_generator1" as eFactura_python.ubl_generator1 {
+}
+package "eFactura_python.ubl_generator_xml" as eFactura_python.ubl_generator_xml {
+}
+package "eFactura_python.utils" as eFactura_python.utils {
+}
+eFactura_python.db --> eFactura_python.factura
+eFactura_python.gui --> eFactura_python.db
+eFactura_python.gui --> eFactura_python.utils
+eFactura_python.gui --> eFactura_python.utils
+eFactura_python.main --> eFactura_python.meniu
+eFactura_python.main_v --> eFactura_python.db
+eFactura_python.main_v --> eFactura_python.factura
+eFactura_python.main_v --> eFactura_python.pdf_generator2
+eFactura_python.meniu --> eFactura_python.db
+eFactura_python.meniu --> eFactura_python.factura
+eFactura_python.meniu --> eFactura_python.utils
+eFactura_python.meniu --> eFactura_python.utils
+eFactura_python.pdf_generator2 --> eFactura_python.db
+eFactura_python.pdf_generator2 --> eFactura_python.factura
+eFactura_python.pdf_generator2_v --> eFactura_python.db
+eFactura_python.pdf_generator2_v --> eFactura_python.factura
+eFactura_python.pdf_generator_no_tva --> eFactura_python.db
+eFactura_python.pdf_generator_no_tva --> eFactura_python.factura
+eFactura_python.ubl_generator --> eFactura_python.factura
+eFactura_python.ubl_generator1 --> eFactura_python.factura
+eFactura_python.utils --> eFactura_python.db
+eFactura_python.utils --> eFactura_python.factura
+eFactura_python.utils --> eFactura_python.pdf_generator2
+eFactura_python.utils --> eFactura_python.ubl_generator
+@enduml

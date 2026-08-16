@@ -1,0 +1,177 @@
+@startuml classes
+set namespaceSeparator none
+class "AplicatieFactura" as eFactura_python.gui.AplicatieFactura {
+  chk_chitanta : Checkbutton
+  client_adresa : Entry
+  client_banca : Entry
+  client_banca1 : Entry
+  client_cui : Entry
+  client_iban : Entry
+  client_iban1 : Entry
+  client_judet : Entry
+  client_localitate : Entry
+  client_nume : Entry
+  client_onrc : Entry
+  client_tara : Entry
+  data_entry : Entry
+  entry_nr_chitanta : Entry
+  furnizor_adresa : Entry
+  furnizor_banca : Entry
+  furnizor_banca1 : Entry
+  furnizor_cui : Entry
+  furnizor_iban : Entry
+  furnizor_iban1 : Entry
+  furnizor_judet : Entry
+  furnizor_localitate : Entry
+  furnizor_nume : Entry
+  furnizor_onrc : Entry
+  furnizor_tara : Entry
+  listbox : Listbox
+  master
+  numar_entry : Entry
+  produs_cant : Entry
+  produs_denumire : Entry
+  produs_frame : Frame
+  produs_pret : Entry
+  produs_tva : Entry
+  produs_um : Combobox, Entry
+  produse : list
+  vrea_chitanta_var : BooleanVar
+  actiune_adauga_produs()
+  actiune_cauta_entitate(tip)
+  actiune_generare()
+  cautare_facturi_dupa_cui()
+  resetare_campuri()
+  sterge_produs()
+  toggle_chitanta_ui()
+}
+class "AplicatieFactura" as eFactura_python.main_v.AplicatieFactura {
+  cantitate_entry : Entry
+  client_adresa : Entry
+  client_cui : Entry
+  client_iban : Entry
+  client_nume : Entry
+  client_onrc : Entry
+  data_entry : Entry
+  furnizor_adresa : Entry
+  furnizor_cui : Entry
+  furnizor_iban : Entry
+  furnizor_nume : Entry
+  furnizor_onrc : Entry
+  master
+  numar_entry : Entry
+  pret_entry : Entry
+  produs_entry : Entry
+  produse : list
+  tva_entry : Entry
+  adauga_produs()
+  genereaza_factura()
+}
+class "AplicatieFacturi" as eFactura_python.meniu.AplicatieFacturi {
+  autocomplete_client
+  autocomplete_furnizor
+  chk_chitanta : Checkbutton
+  client_adresa : Entry
+  client_banca : Entry
+  client_banca1 : Entry
+  client_cui : Entry
+  client_iban : Entry
+  client_iban1 : Entry
+  client_judet : Entry
+  client_localitate : Entry
+  client_nume : Entry
+  client_onrc : Entry
+  client_tara : Entry
+  container : Frame
+  cui_entry : Entry
+  data_entry : Entry
+  entry_nr_chitanta : Entry
+  furnizor_adresa : Entry
+  furnizor_banca : Entry
+  furnizor_banca1 : Entry
+  furnizor_cui : Entry
+  furnizor_iban : Entry
+  furnizor_iban1 : Entry
+  furnizor_judet : Entry
+  furnizor_localitate : Entry
+  furnizor_nume : Entry
+  furnizor_onrc : Entry
+  furnizor_tara : Entry
+  listbox : Listbox
+  numar_entry : Entry
+  pagina_cautare : Frame
+  pagina_generare : Frame
+  pagina_start : Frame
+  pagini : dict
+  produs_cant : Entry
+  produs_denumire : Entry
+  produs_frame : Frame
+  produs_pret : Entry
+  produs_tva : Entry
+  produs_um : Combobox, Entry
+  produse : list
+  ser_fac_entry : Entry
+  vrea_chitanta_var : BooleanVar
+  actiune_adauga_produs()
+  actiune_cauta_entitate(tip)
+  actiune_generare()
+  arata_pagina(pagina)
+  completeaza_client(row)
+  completeaza_furnizor(row)
+  creeaza_meniu()
+  destroy()
+  resetare_campuri()
+  sterge_produs()
+  toggle_chitanta_ui()
+}
+class "AutoCompleteEntry" as eFactura_python.factura.AutoCompleteEntry {
+  dropdown : Toplevel
+  entry
+  listbox : Listbox
+  results : list
+  search_callback
+  select_callback
+  hide_dropdown(event)
+  on_keyrelease(event)
+  on_select(event)
+  show_dropdown()
+}
+class "Entitate" as eFactura_python.factura.Entitate {
+  adresa : str
+  banca : str
+  banca1 : str
+  cui : str
+  iban : str
+  iban1 : str
+  judet : str
+  localitate : str
+  nume : str
+  onrc : str
+  ser_fac : str
+  tara : str
+}
+class "Factura" as eFactura_python.factura.Factura {
+  client
+  cu_chitanta : bool
+  data : str
+  furnizor
+  nr_chit : str
+  numar : str
+  produse : List[Produs]
+  adauga_produs(produs)
+  total_fara_tva()
+  total_general()
+  total_tva()
+}
+class "Produs" as eFactura_python.factura.Produs {
+  cantitate : float
+  denumire : str
+  pret_unitar : float
+  tva_percent : float
+  um : str
+  total()
+  total_tva()
+}
+eFactura_python.factura.Factura --> eFactura_python.factura.Entitate : furnizor
+eFactura_python.factura.Factura --> eFactura_python.factura.Entitate : client
+@enduml
