@@ -2,8 +2,10 @@ import tkinter as tk
 from tkcalendar import DateEntry
 from datetime import datetime
 from tkinter import ttk, messagebox
+
+import db
 from db import get_unitati_text_format, creare_tabele, populate_unitati_default, cauta_facturi_dupa_cui, cauta_in_tabel, \
-    cauta_clienti, cauta_furnizori
+    cauta_clienti, cauta_furnizori, get_explicatii_furnizor
 
 import utils
 from factura import AutoCompleteEntry
@@ -12,6 +14,7 @@ from utils import centreaza_fereastra, sugereaza_nr_chitanta, validare_cui, vali
 
 class AplicatieFacturi:
     def __init__(self, master):
+        self.explicatii_combo = None
         self.pagina_generare = master
         creare_tabele()
         populate_unitati_default()
@@ -164,13 +167,19 @@ class AplicatieFacturi:
         self.produs_frame.grid(row=15, column=1, columnspan=6, pady=5)
         tk.Label(self.produs_frame, text="Denumire produs", font=("Arial", 11, "italic"), bg="#e0f7fa").grid(row=0,
                                                                                                              column=0)
+        # --- AICI ADĂUGĂM COMBOBOX-UL DE EXPLICAȚII ---
+        tk.Label(self.produs_frame, text="Explicații:", bg="#e0f7fa").grid(row=1, column=0, sticky="e", padx=2, pady=5)
+        self.explicatii_combo = ttk.Combobox(self.produs_frame, width=40)
+        self.explicatii_combo.grid(row=1, column=0,  sticky="w", padx=2, pady=5)
+
+
         tk.Label(self.produs_frame, text="U.M.", bg="#e0f7fa", font=("Arial", 11, "italic")).grid(row=0, column=1)
         tk.Label(self.produs_frame, text="Cant.", bg="#e0f7fa", font=("Arial", 11, "italic")).grid(row=0, column=2)
         tk.Label(self.produs_frame, text="Pret unit.", bg="#e0f7fa", font=("Arial", 11, "italic")).grid(row=0, column=3)
         tk.Label(self.produs_frame, text="TVA(%)", bg="#e0f7fa", font=("Arial", 11, "italic")).grid(row=0, column=4)
 
-        self.produs_denumire = tk.Entry(self.produs_frame, width=40)
-        self.produs_denumire.grid(row=1, column=0)
+ #       self.produs_denumire = tk.Entry(self.produs_frame, width=40)
+ #       self.produs_denumire.grid(row=1, column=0)
 
         self.produs_um = tk.Entry(self.produs_frame, width=10)
         um_vals = get_unitati_text_format()
@@ -252,7 +261,7 @@ class AplicatieFacturi:
 
     def actiune_adauga_produs(self):
         raw_data = {
-            'denumire': self.produs_denumire.get(),
+            'denumire': self.explicatii_combo.get(),
             'cant_str': self.produs_cant.get(),
             'pret_str': self.produs_pret.get(),
             'tva_str': self.produs_tva.get(),
@@ -268,7 +277,7 @@ class AplicatieFacturi:
             row_text = f"{produs_nou.denumire[:20]:<33} | {produs_nou.cantitate:=5} | {produs_nou.pret_unitar:>12} | {produs_nou.tva_percent:<6} | {total:>14} | {totalcutva:>12}"
             self.listbox.insert(tk.END, row_text)
 
-            self.produs_denumire.delete(0, tk.END)
+            self.explicatii_combo.delete(0, tk.END)
             self.produs_cant.delete(0, tk.END)
             self.produs_cant.insert(0, "0.00")
             self.produs_pret.delete(0, tk.END)
@@ -306,6 +315,8 @@ class AplicatieFacturi:
                 'banca': self.furnizor_banca, 'iban': self.furnizor_iban,
                 'banca1': self.furnizor_banca1, 'iban1': self.furnizor_iban1, 'serie': self.ser_fac_entry
             }
+
+
         else:
             cui = self.client_cui.get()
             tabel = "clienti"
@@ -346,6 +357,15 @@ class AplicatieFacturi:
                         if 'ser_fac' in date_firma:
                             self.ser_fac_entry.delete(0, "end")
                             self.ser_fac_entry.insert(0, date_firma['ser_fac'])
+
+                    explicatii_firma = db.get_explicatii_furnizor(cui)
+                    if hasattr(self, 'explicatii_combo') and self.explicatii_combo is not None:
+                        self.explicatii_combo['values'] = explicatii_firma
+                        if explicatii_firma:
+                            self.explicatii_combo.set(explicatii_firma[0])
+                        else:
+                            self.explicatii_combo.set("")
+
         finally:
             self.pagina_generare.config(cursor="")
 
@@ -353,6 +373,22 @@ class AplicatieFacturi:
         if not self.produse:
             messagebox.showwarning("Atentie", "Nu ai adaugat produse!")
             return
+
+    # 2. Extragere CUI Furnizor și Explicație din UI
+        cui_f = self.furnizor_cui.get().strip()
+        text_explicatie = ""
+        if hasattr(self, 'explicatii_combo') and self.explicatii_combo is not None:
+                text_explicatie = self.explicatii_combo.get().strip()
+
+                # 3. Salvare explicație nouă în efactura.db pentru furnizorul curent
+        if cui_f and text_explicatie:
+            db.salveaza_explicatie_furnizor(cui_f, text_explicatie)
+            optiuni_noi = db.get_explicatii_furnizor(cui_f)
+
+            if hasattr(self, 'explicatii_combo') and self.explicatii_combo is not None:
+                self.explicatii_combo['values'] = optiuni_noi
+                self.explicatii_combo.set(text_explicatie)
+
 
         d_furnizor = {
             'nume': self.furnizor_nume.get(), 'cui': self.furnizor_cui.get(), 'onrc': self.furnizor_onrc.get(),
@@ -375,7 +411,9 @@ class AplicatieFacturi:
             'numar': self.numar_entry.get(),
             'data': self.data_entry.get(),
             'nr_chit': self.entry_nr_chitanta.get(),
-            'vrea_chitanta': self.vrea_chitanta_var.get()
+            'vrea_chitanta': self.vrea_chitanta_var.get(),
+            'explicatii': text_explicatie
+
         }
 
         try:
@@ -645,6 +683,15 @@ class AplicatieFacturi:
             if date_firma and 'ser_fac' in date_firma:
                 self.ser_fac_entry.delete(0, "end")
                 self.ser_fac_entry.insert(0, date_firma['ser_fac'])
+
+        cui_furnizor = self.furnizor_cui.get()
+        explicatii_firma = db.get_explicatii_furnizor(cui_furnizor)
+        self.explicatii_combo['values'] = explicatii_firma
+
+        if explicatii_firma:
+            self.explicatii_combo.set(explicatii_firma[0])
+        else:
+            self.explicatii_combo.set("")
 
     def destroy(self):
         self.arata_pagina(self.pagina_start)

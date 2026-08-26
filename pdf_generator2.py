@@ -1,6 +1,7 @@
 import os
 
 from reportlab.lib import styles
+from reportlab.lib.styles import ParagraphStyle
 
 from db import format_data_ro
 from factura import Factura, suma_in_litere
@@ -36,6 +37,15 @@ def export_pdf(factura: Factura, filename="Factura.pdf"):
     style_titlu_factura.alignment = 1
     style_titlu_factura.fontSize = 11
     style_titlu_factura.leading = 15
+
+    styles_sheet = getSampleStyleSheet()
+
+    style_produs = ParagraphStyle(
+        'DenumireProdus',
+        parent=styles_sheet['Normal'],
+        fontSize=8,
+        leading=10  # Spațierea între rânduri în cadrul aceleiași celule
+    )
 
     # --- HEADER TABLES (Furnizor, Info, Client) ---
     data_info = [
@@ -128,7 +138,7 @@ def export_pdf(factura: Factura, filename="Factura.pdf"):
     for idx, p in enumerate(factura.produse, 1):
         row = [
             str(idx),
-            p.denumire,
+            Paragraph(p.denumire, style_produs),
             str(p.um)[-3:] if p.um else "",
             f"{p.cantitate}",
             f"{p.pret_unitar:.2f}"
@@ -171,6 +181,13 @@ def export_pdf(factura: Factura, filename="Factura.pdf"):
     style_celula = styles["Normal"]
     style_celula.fontSize = 8
     style_celula.leading = 10
+
+    style_produs = ParagraphStyle(
+        'DenumireProdus',
+        parent=styles_sheet['Normal'],
+        fontSize=8,
+        leading=10  # Spațierea între rânduri în cadrul aceleiași celule
+    )
 
     # Pregătim textul pentru coloana din mijloc (Delegat)
     text_delegat = (

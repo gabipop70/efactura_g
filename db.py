@@ -90,6 +90,16 @@ def creare_tabele():
     )
     ''')
 
+    # Creează tabelul de explicații dacă nu există
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS explicatii (
+         id INTEGER PRIMARY KEY AUTOINCREMENT,
+         cui_furnizor TEXT NOT NULL,
+         text_explicatie TEXT NOT NULL,
+         UNIQUE(cui_furnizor, text_explicatie)
+    )
+    ''')
+
     conn.commit()
     conn.close()
 
@@ -481,3 +491,37 @@ def cauta_furnizori(text):
             campuri_returnate=['cui', 'nume', 'onrc',  'localitate','adresa', 'judet', 'tara', 'banca',
                                'iban', 'banca1', 'iban1']
         )
+
+
+def get_explicatii_furnizor(cui_furnizor):
+    """Extrage explicațiile salvate doar pentru un anumit furnizor."""
+    if not cui_furnizor:
+        return []
+
+    conn = sqlite3.connect("efactura.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT text_explicatie FROM explicatii WHERE cui_furnizor = ? ORDER BY text_explicatie ASC",
+        (cui_furnizor,)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return [r[0] for r in rows]
+
+
+def salveaza_explicatie_furnizor(cui_furnizor, text):
+    """Inserează o explicație nouă dedicată furnizorului curent."""
+    text_curat = text.strip()
+    if not cui_furnizor or not text_curat:
+        return
+
+    conn = sqlite3.connect("efactura.db")
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT OR IGNORE INTO explicatii (cui_furnizor, text_explicatie) VALUES (?, ?)",
+            (cui_furnizor, text_curat)
+        )
+        conn.commit()
+    finally:
+        conn.close()
