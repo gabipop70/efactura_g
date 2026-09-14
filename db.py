@@ -1,5 +1,7 @@
 from datetime import datetime
 import sqlite3
+import os
+import sys
 from wsgiref import headers
 
 from tqdm import tk
@@ -493,38 +495,90 @@ def cauta_furnizori(text):
         )
 
 
-def get_explicatii_furnizor(cui_furnizor):
-    """Extrage explicațiile salvate doar pentru un anumit furnizor."""
-    if not cui_furnizor:
+def get_db_path(filename="efactura.db"):
+    if getattr(sys, 'frozen', False):
+        base_dir = os.path.dirname(sys.executable)
+    else:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_dir, filename)
+
+def get_toate_sabloanele_furnizor(cui_furnizor):
+    """Returnează lista tuturor explicațiilor pentru un CUI."""
+    cui_curat = str(cui_furnizor).strip() if cui_furnizor else ""
+    if not cui_curat:
         return []
 
-    conn = sqlite3.connect("efactura.db")
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT text_explicatie FROM explicatii WHERE cui_furnizor = ? ORDER BY text_explicatie ASC",
-        (cui_furnizor,)
-    )
-    rows = cursor.fetchall()
-    conn.close()
-    return [r[0] for r in rows]
-
-
-def salveaza_explicatie_furnizor(cui_furnizor, text):
-    """Inserează o explicație nouă dedicată furnizorului curent."""
-    text_curat = text.strip()
-    if not cui_furnizor or not text_curat:
-        return
-
-    conn = sqlite3.connect("efactura.db")
+    db_path = get_db_path("efactura.db")
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     try:
-        res = cursor.execute(
-            "INSERT OR IGNORE INTO explicatii (cui_furnizor, text_explicatie) VALUES (?, ?)",
-            (cui_furnizor, text_curat)
+        cursor.execute(
+            "SELECT text_explicatie FROM explicatii WHERE cui_furnizor = ? ORDER BY id DESC",
+            (cui_curat,)
         )
-        conn.commit()
+        return [row[0] for row in cursor.fetchall()]
     finally:
         conn.close()
 
+def salveaza_explicatie_furnizor(cui_furnizor, text):
+    """Inserează o explicație nouă dacă nu există deja."""
+    cui_curat = str(cui_furnizor).strip() if cui_furnizor else ""
+    text_curat = str(text).strip() if text else ""
+    if not cui_curat or not text_curat:
+        return False
+
+    db_path = get_db_path("efactura.db")
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT OR IGNORE INTO explicatii (cui_furnizor, text_explicatie) VALUES (?, ?)",
+            (cui_curat, text_curat)
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    finally:
+        conn.close()
+
+def actualizeaza_explicatie_furnizor(cui_furnizor, text_vechi, text_nou):
+    """Modifică o explicație existentă din baza de date."""
+    cui_curat = str(cui_furnizor).strip() if cui_furnizor else ""
+    t_vechi = str(text_vechi).strip() if text_vechi else ""
+    t_nou = str(text_nou).strip() if text_nou else ""
+    if not cui_curat or not t_vechi or not t_nou:
+        return False
+
+    db_path = get_db_path("efactura.db")
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "UPDATE explicatii SET text_explicatie = ? WHERE cui_furnizor = ? AND text_explicatie = ?",
+            (t_nou, cui_curat, t_vechi)
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    finally:
+        conn.close()
+
+def sterge_explicatie_furnizor(cui_furnizor, text):
+    """Șterge o explicație specifică."""
+    cui_curat = str(cui_furnizor).strip() if cui_furnizor else ""
+    text_curat = str(text).strip() if text else ""
+    if not cui_curat or not text_curat:
+        return False
+
+    db_path = get_db_path("efactura.db")
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "DELETE FROM explicatii WHERE cui_furnizor = ? AND text_explicatie = ?",
+            (cui_curat, text_curat)
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    finally:
+        conn.close()
     print(res)
     exit()
