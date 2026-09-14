@@ -170,6 +170,11 @@ class AplicatieFacturi:
         # --- AICI ADĂUGĂM COMBOBOX-UL DE EXPLICAȚII ---
         tk.Label(self.produs_frame, text="Explicații:", bg="#e0f7fa").grid(row=1, column=0, sticky="e", padx=2, pady=5)
         self.explicatii_combo = ttk.Combobox(self.produs_frame, width=40)
+
+        def fct(event):
+            raise Exception('ceva mozerie')
+
+        self.explicatii_combo.bind('<<ComboboxSelected>>', fct)
         self.explicatii_combo.grid(row=1, column=0,  sticky="w", padx=2, pady=5)
 
 
@@ -268,6 +273,9 @@ class AplicatieFacturi:
             'um': self.produs_um.get()
         }
         try:
+            # res = db.salveaza_explicatie_furnizor(raw_data['denumire'],
+            #                                 self.furnizor_cui.get().strip())
+
             produs_nou = utils.validare_produs_input(**raw_data)
             self.produse.append(produs_nou)
 
@@ -375,21 +383,6 @@ class AplicatieFacturi:
             return
 
     # 2. Extragere CUI Furnizor și Explicație din UI
-        cui_f = self.furnizor_cui.get().strip()
-        text_explicatie = ""
-        if hasattr(self, 'explicatii_combo') and self.explicatii_combo is not None:
-                text_explicatie = self.explicatii_combo.get().strip()
-
-                # 3. Salvare explicație nouă în efactura.db pentru furnizorul curent
-        if cui_f and text_explicatie:
-            db.salveaza_explicatie_furnizor(cui_f, text_explicatie)
-            optiuni_noi = db.get_explicatii_furnizor(cui_f)
-
-            if hasattr(self, 'explicatii_combo') and self.explicatii_combo is not None:
-                self.explicatii_combo['values'] = optiuni_noi
-                self.explicatii_combo.set(text_explicatie)
-
-
         d_furnizor = {
             'nume': self.furnizor_nume.get(), 'cui': self.furnizor_cui.get(), 'onrc': self.furnizor_onrc.get(),
             'adresa': self.furnizor_adresa.get(), 'localitate': self.furnizor_localitate.get(),
@@ -412,7 +405,7 @@ class AplicatieFacturi:
             'data': self.data_entry.get(),
             'nr_chit': self.entry_nr_chitanta.get(),
             'vrea_chitanta': self.vrea_chitanta_var.get(),
-            'explicatii': text_explicatie
+            'explicatii': ''
 
         }
 

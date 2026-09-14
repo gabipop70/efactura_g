@@ -48,6 +48,13 @@ def export_pdf(factura: Factura, filename="Factura.pdf"):
     )
 
     # --- HEADER TABLES (Furnizor, Info, Client) ---
+    style_text_header = ParagraphStyle(
+        'HeaderInfo',
+        parent=styles_sheet['Normal'],
+        fontSize=8,
+        leading=10
+    )
+
     data_info = [
         [Paragraph("<b>FACTURA</b>", style_titlu_factura)],
         ['SERIE FACTURA:', factura.furnizor.ser_fac],
@@ -70,7 +77,7 @@ def export_pdf(factura: Factura, filename="Factura.pdf"):
         ['Furnizor:', factura.furnizor.nume],
         ['CUI:', factura.furnizor.cui],
         ['ONRC:', factura.furnizor.onrc],
-        ['Adresa:', factura.furnizor.adresa],
+        ['Adresa:', Paragraph(factura.furnizor.adresa, style_text_header)],
         ['Localitate:', factura.furnizor.localitate],
         ['Judet:', factura.furnizor.judet],
         ['Banca:', factura.furnizor.banca],
@@ -78,7 +85,7 @@ def export_pdf(factura: Factura, filename="Factura.pdf"):
         ['Banca:', factura.furnizor.banca1],
         ['IBAN:', factura.furnizor.iban1],
     ]
-    tabel_furnizor = Table(data_furnizor, hAlign='LEFT')
+    tabel_furnizor = Table(data_furnizor, colWidths=[45,145], hAlign='LEFT')
     tabel_furnizor.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
         ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
@@ -94,18 +101,18 @@ def export_pdf(factura: Factura, filename="Factura.pdf"):
         ['Client:', factura.client.nume],
         ['CUI:', factura.client.cui],
         ['ONRC:', factura.client.onrc],
-        ['Adresa:', factura.client.adresa],
+        ['Adresa:', Paragraph(factura.client.adresa, style_text_header)],
         ['Localitate:', factura.client.localitate],
         ['Judet:', factura.client.judet],
         ['Banca:', factura.client.banca],
         ['IBAN:', factura.client.iban],
     ]
-    tabel_client = Table(data_client, hAlign='LEFT')
+    tabel_client = Table(data_client, colWidths=[45, 145], hAlign='LEFT')
     tabel_client.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
         ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
         ('FONTSIZE', (0, 0), (-1, -1), 8),
-        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+        ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
         ('ALIGN', (1, 0), (1, -1), 'LEFT'),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ('TOPPADDING', (0, 0), (-1, -1), 1),  # Implicit este 3 sau 5

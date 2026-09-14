@@ -94,8 +94,8 @@ def creare_tabele():
     c.execute('''
     CREATE TABLE IF NOT EXISTS explicatii (
          id INTEGER PRIMARY KEY AUTOINCREMENT,
-         cui_furnizor TEXT NOT NULL,
-         text_explicatie TEXT NOT NULL,
+         cui_furnizor TEXT,
+         text_explicatie TEXT,
          UNIQUE(cui_furnizor, text_explicatie)
     )
     ''')
@@ -518,10 +518,13 @@ def salveaza_explicatie_furnizor(cui_furnizor, text):
     conn = sqlite3.connect("efactura.db")
     cursor = conn.cursor()
     try:
-        cursor.execute(
+        res = cursor.execute(
             "INSERT OR IGNORE INTO explicatii (cui_furnizor, text_explicatie) VALUES (?, ?)",
             (cui_furnizor, text_curat)
         )
         conn.commit()
     finally:
         conn.close()
+
+    print(res)
+    exit()
