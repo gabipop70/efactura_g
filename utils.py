@@ -1,6 +1,7 @@
 # utils.py
 # -*- coding: utf-8 -*-
 import os
+import unicodedata
 import re
 from datetime import datetime
 
@@ -78,6 +79,17 @@ def logic_cauta_entitate(cui, tip_entitate="furnizori"):
                 print('Adresa reala', adresa_reala)
                 adresa_fara_localitate, loc = proceseaza_adresa_si_localitate(adresa_reala)
 
+                print('Judet',rezultat.get('judet'))
+
+                # Preluare județ brut (ex: 'BISTRIŢA-NĂSĂUD')
+                judet_raw = rezultat.get('judet', '')
+
+                # Formatare: 'Bistrița-Năsăud'
+                judet_nume = judet_raw.title() if judet_raw else 'N/A'
+
+                # Obținere abreviere: 'BN'
+                judet_abrev = get_abreviere_judet(judet_raw)
+
                 #rest_adresa_lista = adresa_reala[:-1]
 
                 # 3. Unim restul elementelor într-un text curat
@@ -93,6 +105,7 @@ def logic_cauta_entitate(cui, tip_entitate="furnizori"):
                     'nume': str(rezultat.get('denumire')).upper(),
                     'adresa': str(adresa_fara_localitate).upper(),
                     'localitate': str(loc).upper(),
+                    'judet':str(judet_abrev).upper(),
                     'platitor_tva': rezultat.get('vat_status'),
                     'onrc': rezultat.get('numar_reg_com'),
                     'stare': rezultat.get('state'),
@@ -361,3 +374,26 @@ def proceseaza_adresa_si_localitate(date_input):
     adresa_fara_localitate = ", ".join(elemente_valide)
 
     return adresa_fara_localitate, localitate
+
+# Mapare între denumirea județului și abrevierea de 2 litere
+MAP_ABREVIERI = {
+    "ALBA": "AB", "ARAD": "AR", "ARGES": "AG", "BACAU": "BC", "BIHOR": "BH",
+    "BISTRITA-NASAUD": "BN", "BOTOSANI": "BT", "BRASOV": "BV", "BRAILA": "BR",
+    "BUCURESTI": "B", "BUZAU": "BZ", "CARAS-SEVERIN": "CS", "CALARASI": "CL",
+    "CLUJ": "CJ", "CONSTANTA": "CT", "COVASNA": "CV", "DAMBOVITA": "DB",
+    "DOLJ": "DJ", "GALATI": "GL", "GIURGIU": "GR", "GORJ": "GJ",
+    "HARGHITA": "HR", "HUNEDOARA": "HD", "IALOMITA": "IL", "IASI": "IS",
+    "ILFOV": "IF", "MARAMURES": "MM", "MEHEDINTI": "MH", "MURES": "MS",
+    "NEAMT": "NT", "OLT": "OT", "PRAHOVA": "PH", "SATU MARE": "SM",
+    "SALAJ": "SJ", "SIBIU": "SB", "SUCEAVA": "SV", "TELEORMAN": "TR",
+    "TIMIS": "TM", "TULCEA": "TL", "VASLUI": "VS", "VALCEA": "VL",
+    "VRANCEA": "VN"
+}
+
+def get_abreviere_judet(nume_judet):
+    if not nume_judet:
+        return "N/A"
+    # Curățăm diacriticele și uniformizăm (ex: BISTRIŢA-NĂSĂUD -> BISTRITA-NASAUD)
+    nfd = unicodedata.normalize('NFD', str(nume_judet).upper())
+    fara_diacritice = ''.join(c for c in nfd if unicodedata.category(c) != 'Mn').replace('Ţ', 'T').replace('Ş', 'S')
+    return MAP_ABREVIERI.get(fara_diacritice, "N/A")

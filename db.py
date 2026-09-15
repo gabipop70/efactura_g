@@ -348,10 +348,13 @@ def cauta_firma_openapi(cui, api_key):
         # Verificăm dacă cererea a fost de succes
         if response.status_code == 200:
             date = response.json()
+
+
             print(f"--- Date pentru {date.get('denumire')} ---")
             print(f"CUI: {date.get('cif')}")
             print(f"Reg. Com: {date.get('numar_reg_com')}")
             print(f"Adresă: {date.get('adresa')}")
+            print(f"Județ: {date.get('judet_abrev')}")
             print(f"Plătitor TVA: {'DA' if date.get('vat_status') else 'NU'}")
             return date
 
