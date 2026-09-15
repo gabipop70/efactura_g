@@ -66,6 +66,9 @@ def creare_tabele():
         total_tva REAL,
         total_general REAL,
         nr_chit TEXT,
+        spv TXT,
+        nr1 INTEGER,
+        nr2 INTEGER
         FOREIGN KEY(furnizor_id) REFERENCES furnizori(id),
         FOREIGN KEY(client_id) REFERENCES clienti(id)
     )''')
