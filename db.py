@@ -356,6 +356,7 @@ def cauta_firma_openapi(cui, api_key):
             print(f"Adresă: {date.get('adresa')}")
             print(f"Județ: {date.get('judet_abrev')}")
             print(f"Plătitor TVA: {'DA' if date.get('vat_status') else 'NU'}")
+
             return date
 
         elif response.status_code == 404:

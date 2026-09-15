@@ -92,12 +92,6 @@ def logic_cauta_entitate(cui, tip_entitate="furnizori"):
 
                 #rest_adresa_lista = adresa_reala[:-1]
 
-                # 3. Unim restul elementelor într-un text curat
-                # Rezultat: "STR. PRINCIPALA, 307, -"
-               # adresa_fara_localitate = ", ".join(rest_adresa_lista).strip().upper()
-
-                # Dacă la final a rămas o virgulă sau un cratimă izolată, o putem curăța
-                #adresa_fara_localitate = adresa_fara_localitate.rstrip(', -')
 
                 print('Adresa', adresa_fara_localitate,'Localitate ',loc)
                 entitate = {
