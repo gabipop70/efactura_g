@@ -12,6 +12,7 @@ from db import (
 )
 
 import utils
+import tr_anaf  # Modulul de backend pentru RO e-Factura
 from factura import AutoCompleteEntry
 from utils import centreaza_fereastra, sugereaza_nr_chitanta, validare_cui, validare_cnp
 
@@ -23,7 +24,7 @@ class AplicatieFacturi:
         creare_tabele()
         populate_unitati_default()
 
-        centreaza_fereastra(master, 1100, 800)
+        centreaza_fereastra(master, 1100, 700)
         master.title("🧾 Sistem Gestiune e-Facturi")
         master.configure(bg="#e0f7fa")
 
@@ -35,11 +36,12 @@ class AplicatieFacturi:
         self.pagina_start = tk.Frame(self.container, bg="#e0f7fa")
         self.pagina_generare = tk.Frame(self.container, bg="#e0f7fa")
         self.pagina_cautare = tk.Frame(self.container, bg="#e0f7fa")
+        self.pagina_anaf = tk.Frame(self.container, bg="#e0f7fa")
 
         # --- CONFIGURARE MENIU ---
         self.creeaza_meniu()
 
-        for p in (self.pagina_start, self.pagina_generare, self.pagina_cautare):
+        for p in (self.pagina_start, self.pagina_generare, self.pagina_cautare, self.pagina_anaf):
             p.grid(row=0, column=0, sticky="nsew")
 
         self.container.grid_rowconfigure(0, weight=1)
@@ -49,6 +51,7 @@ class AplicatieFacturi:
         self._setup_ui_start()
         self._setup_ui_generare()
         self._setup_ui_cautare()
+        self._setup_ui_anaf()
 
         # Afișăm prima pagină
         self.arata_pagina(self.pagina_start)
@@ -64,6 +67,8 @@ class AplicatieFacturi:
         menu_optiuni.add_separator()
         menu_optiuni.add_command(label="Factură Nouă", command=lambda: self.arata_pagina(self.pagina_generare))
         menu_optiuni.add_command(label="Istoric / Căutare", command=lambda: self.arata_pagina(self.pagina_cautare))
+        menu_optiuni.add_command(label="🔑 Token ANAF / Transmitere e-Factura",
+                                 command=lambda: self.arata_pagina(self.pagina_anaf))
         menu_optiuni.add_separator()
         menu_optiuni.add_command(label="Ieșire", command=self.master.quit)
 
@@ -74,6 +79,8 @@ class AplicatieFacturi:
         elif pagina == self.pagina_cautare:
             if hasattr(self, 'cui_entry'):
                 self.cui_entry.focus_set()
+        elif pagina == self.pagina_anaf:
+            self.incarca_facturi_netransmise_in_tabel()
 
     def _setup_ui_start(self):
         p = self.pagina_start
@@ -85,6 +92,7 @@ class AplicatieFacturi:
             "• Folosiți meniul de sus pentru navigare.\n"
             "• 'Factură Nouă' - Generare fișiere PDF și XML (RO e-Factura).\n"
             "• 'Istoric' - Căutare și re-listare facturi emise anterior.\n"
+            "• 'Token ANAF / Transmitere' - Integrare directă cu portalul e-Factura.\n"
             "• CUI-urile sunt salvate automat pentru utilizări viitoare."
         )
 
@@ -100,8 +108,206 @@ class AplicatieFacturi:
         tk.Button(btn_frame, text="🔍 Consultă Istoric", font=("Arial", 11), width=20,
                   command=lambda: self.arata_pagina(self.pagina_cautare)).grid(row=0, column=1, padx=10)
 
+        tk.Button(btn_frame, text="🔑 Modul e-Factura", font=("Arial", 11), width=20,
+                  command=lambda: self.arata_pagina(self.pagina_anaf)).grid(row=0, column=2, padx=10)
+
         tk.Label(p, text="Versiune: 2026.1.0 | Status DB: Conectat", font=("Arial", 8),
                  bg="#e0f7fa", fg="gray").pack(side="bottom", pady=10)
+
+    # ==========================================
+    # MODUL E-FACTURA ANAF (UI CU SELECTARE FACTURI)
+    # ==========================================
+    def _setup_ui_anaf(self):
+        p = self.pagina_anaf
+
+        # Titlu
+        tk.Label(p, text="🏛️ Modul Transmitere RO e-Factura ANAF", font=("Arial", 16, "bold"),
+                 bg="#e0f7fa", fg="#006064").pack(pady=(15, 5))
+
+        # --- FRAME SUS: AUTENTIFICARE, FILTRARE CUI ȘI BUTOANE ACȚIUNI ---
+        top_frame = ttk.LabelFrame(p, text=" Conectare, Filtrare & Control ", padding=10)
+        top_frame.pack(fill="x", padx=20, pady=5)
+
+        # 1. Buton Token ANAF
+        tk.Button(
+            top_frame,
+            text="🔑 Actualizare Token ANAF (90 zile)",
+            bg="#1976D2",
+            fg="white",
+            font=("Arial", 10, "bold"),
+            command=self.actiune_actualizare_token
+        ).pack(side="left", padx=(5, 15))
+
+        # 2. Câmp Filtrare CUI Furnizor
+        tk.Label(top_frame, text="Filtru CUI Furnizor:", font=("Arial", 10, "bold")).pack(side="left", padx=(5, 2))
+        self.cui_filter_entry = tk.Entry(top_frame, width=14, font=("Arial", 10))
+        self.cui_filter_entry.pack(side="left", padx=(0, 10))
+
+        # 3. Buton Reîmprospătare/Filtrare
+        tk.Button(
+            top_frame,
+            text="🔍 Filtrează Facturi",
+            bg="#009688",
+            fg="white",
+            font=("Arial", 10, "bold"),
+            command=self.incarca_facturi_netransmise_in_tabel
+        ).pack(side="left", padx=5)
+
+        # 4. Buton Transmitere Selectate
+        tk.Button(
+            top_frame,
+            text="🚀 Transmite Facturile Selectate",
+            bg="#2E7D32",
+            fg="white",
+            font=("Arial", 10, "bold"),
+            command=self.transmite_facturi_selectate
+        ).pack(side="right", padx=5)
+
+        # --- FRAME MIJLOC: TABELUL CU FACTURILE NETRANSMISE ---
+        frame_tabel = ttk.LabelFrame(p, text=" Selectează Facturile pentru Transmitere ", padding=10)
+        frame_tabel.pack(fill="both", expand=True, padx=20, pady=10)
+
+        coloane = ("id", "numar", "data", "client", "total", "cui_f", "nr1", "nr2")
+        self.tree_netransmise = ttk.Treeview(frame_tabel, columns=coloane, show="headings", selectmode="extended")
+
+        self.tree_netransmise.heading("id", text="ID DB")
+        self.tree_netransmise.heading("numar", text="Nr. Factură")
+        self.tree_netransmise.heading("data", text="Data Emiterii")
+        self.tree_netransmise.heading("client", text="Client")
+        self.tree_netransmise.heading("total", text="Total RON")
+        self.tree_netransmise.heading("cui_f", text="CUI Furnizor")
+        self.tree_netransmise.heading("nr1", text="ID incarcare")
+        self.tree_netransmise.heading("nr2", text="ID descarcare")
+
+        self.tree_netransmise.column("id", width=60, anchor="center")
+        self.tree_netransmise.column("numar", width=70, anchor="center")
+        self.tree_netransmise.column("data", width=70, anchor="center")
+        self.tree_netransmise.column("client", width=300, anchor="w")
+        self.tree_netransmise.column("total", width=70, anchor="e")
+        self.tree_netransmise.column("cui_f", width=70, anchor="center")
+        self.tree_netransmise.column("nr1", width=80, anchor="center")
+        self.tree_netransmise.column("nr2", width=80, anchor="center")
+
+        scrollbar_y = ttk.Scrollbar(frame_tabel, orient="vertical", command=self.tree_netransmise.yview)
+        self.tree_netransmise.configure(yscrollcommand=scrollbar_y.set)
+
+        self.tree_netransmise.pack(side="left", fill="both", expand=True)
+        scrollbar_y.pack(side="right", fill="y")
+
+        # --- FRAME JOS: OPȚIUNI RAPIDE DE SELECTARE ---
+        ctrl_frame = tk.Frame(p, bg="#e0f7fa")
+        ctrl_frame.pack(fill="x", padx=20, pady=(0, 15))
+
+        tk.Button(ctrl_frame, text="✅ Selectează Toate", command=self.selecteaza_toate_facturile).pack(side="left",
+                                                                                                       padx=5)
+        tk.Button(ctrl_frame, text="❌ Deselectează Toate", command=self.deselecteaza_toate_facturile).pack(side="left",
+                                                                                                           padx=5)
+
+        tk.Label(ctrl_frame,
+                 text="💡 Lăsați câmpul 'Filtru CUI Furnizor' gol pentru a afișa facturile tuturor furnizorilor.",
+                 font=("Arial", 9, "italic"), bg="#e0f7fa", fg="#555").pack(side="right", padx=10)
+
+        # Încărcăm datele la prima deschidere
+        self.incarca_facturi_netransmise_in_tabel()
+        scrollbar_y = ttk.Scrollbar(frame_tabel, orient="vertical", command=self.tree_netransmise.yview)
+        self.tree_netransmise.configure(yscrollcommand=scrollbar_y.set)
+
+        self.tree_netransmise.pack(side="left", fill="both", expand=True)
+        scrollbar_y.pack(side="right", fill="y")
+
+        # --- FRAME JOS: OPȚIUNI RAPIDE DE SELECTARE ---
+
+        tk.Label(ctrl_frame,
+                 text="💡 Indicație: Puteți selecta mai multe facturi ținând apăsat pe Tasta CTRL sau SHIFT.",
+                 font=("Arial", 9, "italic"), bg="#e0f7fa", fg="#555").pack(side="right", padx=10)
+
+        # Încărcăm datele la prima deschidere
+        self.incarca_facturi_netransmise_in_tabel()
+
+    def actiune_actualizare_token(self):
+        messagebox.showinfo(
+            "Autorizare ANAF",
+            "S-a deschis browserul.\nIntroduceți PIN-ul semnăturii electronice și aprobați cererea de acces."
+        )
+        try:
+            thread_server = tr_anaf.autorizeaza_anaf_pas_1()
+            succes, mesaj = tr_anaf.finalizeaza_autorizare_pas_2(thread_server)
+            if succes:
+                messagebox.showinfo("Succes", mesaj)
+            else:
+                messagebox.showerror("Eroare", mesaj)
+        except Exception as e:
+            messagebox.showerror("Eroare Autentificare", str(e))
+
+    def incarca_facturi_netransmise_in_tabel(self):
+        """Populează tabelul Treeview cu facturile netransmise, filtrând opțional după CUI furnizor."""
+        # Curățăm tabelul existent
+        for item in self.tree_netransmise.get_children():
+            self.tree_netransmise.delete(item)
+
+        # Preluăm CUI-ul din câmpul de filtru (dacă există)
+        cui_filtru = None
+        if hasattr(self, 'cui_filter_entry'):
+            val = self.cui_filter_entry.get().strip()
+            if val:
+                cui_filtru = val
+
+        # Sau dacă vrei să preia automat CUI-ul furnizorului din pagina de generare când filtrul e gol:
+        if not cui_filtru and hasattr(self, 'furnizor_cui'):
+            val_gen = self.furnizor_cui.get().strip()
+            if val_gen and hasattr(self, 'cui_filter_entry'):
+                self.cui_filter_entry.delete(0, tk.END)
+                self.cui_filter_entry.insert(0, val_gen)
+                cui_filtru = val_gen
+
+        try:
+            # Apelăm funcția din tr_anaf cu parametrul de CUI furnizor
+            facturi = tr_anaf.preia_facturi_netransmise(cui_furnizor=cui_filtru)
+
+            if not facturi:
+                return
+
+            for f in facturi:
+                id_db, nr, data, client, total, cui_f, nr1, nr2 = f
+                total_str = f"{total:.2f}" if total is not None else "0.00"
+
+                self.tree_netransmise.insert(
+                    "", "end", iid=str(id_db),
+                    values=(id_db, nr, data, client, total_str, cui_f, nr1, nr2)
+                )
+        except Exception as e:
+            print(f"Eroare la încărcarea tabelului de facturi netransmise: {e}")
+    def selecteaza_toate_facturile(self):
+        all_items = self.tree_netransmise.get_children()
+        self.tree_netransmise.selection_set(all_items)
+
+    def deselecteaza_toate_facturile(self):
+        self.tree_netransmise.selection_remove(self.tree_netransmise.selection())
+
+    def transmite_facturi_selectate(self):
+        selected_items = self.tree_netransmise.selection()
+        if not selected_items:
+            messagebox.showwarning("Atenție", "Te rugăm să selectezi cel puțin o factură din tabel!")
+            return
+
+        lista_ids = [int(item_id) for item_id in selected_items]
+
+        confirm = messagebox.askyesno(
+            "Confirmare Transmitere",
+            f"Sigur dorești să transmiți cele {len(lista_ids)} facturi selectate la ANAF?"
+        )
+        if not confirm:
+            return
+
+        try:
+            rezultat = tr_anaf.proceseaza_trimitere_facturi_selectate(lista_ids)
+
+            messagebox.showinfo("Rezultat Transmitere", rezultat)
+
+            # Reîmprospătăm tabelul (facturile trimise cu succes vor dispărea din listă)
+            self.incarca_facturi_netransmise_in_tabel()
+        except Exception as e:
+            messagebox.showerror("Eroare Transmitere", str(e))
 
     def _setup_ui_generare(self):
         self.produse = []
@@ -166,7 +372,6 @@ class AplicatieFacturi:
         tk.Label(self.produs_frame, text="Denumire produs / Explicație", font=("Arial", 11, "italic"),
                  bg="#e0f7fa").grid(row=0, column=0, sticky="w")
 
-        # Frame secundar pentru alinierea curată a ComboBox-ului și a butonului de Șabloane
         frame_explicatii_ctrl = tk.Frame(self.produs_frame, bg="#e0f7fa")
         frame_explicatii_ctrl.grid(row=1, column=0, padx=2, pady=5, sticky="w")
 
@@ -669,7 +874,6 @@ class AplicatieFacturi:
         win.resizable(False, False)
         win.grab_set()
 
-        # Structură bazată pe .pack() pentru a evita erorile de amestecare a geometriei
         frame_input = ttk.LabelFrame(win, text=" Explicație / Șablon ", padding=10)
         frame_input.pack(fill="x", padx=10, pady=5)
 

@@ -66,9 +66,10 @@ def creare_tabele():
         total_tva REAL,
         total_general REAL,
         nr_chit TEXT,
-        spv TXT,
+        tr_efact TEXT,
         nr1 INTEGER,
         nr2 INTEGER,
+        data_tr TEXT,
         FOREIGN KEY(furnizor_id) REFERENCES furnizori(id),
         FOREIGN KEY(client_id) REFERENCES clienti(id)
     )''')
@@ -104,7 +105,14 @@ def creare_tabele():
          UNIQUE(cui_furnizor, text_explicatie)
     )
     ''')
-
+    c.execute('''
+            CREATE TABLE IF NOT EXISTS anaf_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                access_token TEXT,
+                refresh_token TEXT,
+                expires_at DATETIME
+         )
+    ''')
     conn.commit()
     conn.close()
 
