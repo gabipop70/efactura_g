@@ -2,6 +2,7 @@ import tkinter as tk
 from tkcalendar import DateEntry
 from datetime import datetime
 from tkinter import ttk, messagebox
+from tab_facturi import EFacturaNotebook
 
 import db
 from db import (
@@ -12,6 +13,7 @@ from db import (
 )
 
 import utils
+import tr_anaf  # Modulul de backend pentru RO e-Factura
 from factura import AutoCompleteEntry
 from utils import centreaza_fereastra, sugereaza_nr_chitanta, validare_cui, validare_cnp
 
@@ -23,7 +25,7 @@ class AplicatieFacturi:
         creare_tabele()
         populate_unitati_default()
 
-        centreaza_fereastra(master, 1100, 800)
+        centreaza_fereastra(master, 1100, 700)
         master.title("🧾 Sistem Gestiune e-Facturi")
         master.configure(bg="#e0f7fa")
 
@@ -35,11 +37,12 @@ class AplicatieFacturi:
         self.pagina_start = tk.Frame(self.container, bg="#e0f7fa")
         self.pagina_generare = tk.Frame(self.container, bg="#e0f7fa")
         self.pagina_cautare = tk.Frame(self.container, bg="#e0f7fa")
+        self.pagina_anaf = tk.Frame(self.container, bg="#e0f7fa")
 
         # --- CONFIGURARE MENIU ---
         self.creeaza_meniu()
 
-        for p in (self.pagina_start, self.pagina_generare, self.pagina_cautare):
+        for p in (self.pagina_start, self.pagina_generare, self.pagina_cautare, self.pagina_anaf):
             p.grid(row=0, column=0, sticky="nsew")
 
         self.container.grid_rowconfigure(0, weight=1)
@@ -49,6 +52,7 @@ class AplicatieFacturi:
         self._setup_ui_start()
         self._setup_ui_generare()
         self._setup_ui_cautare()
+        self._setup_ui_anaf()
 
         # Afișăm prima pagină
         self.arata_pagina(self.pagina_start)
@@ -64,6 +68,8 @@ class AplicatieFacturi:
         menu_optiuni.add_separator()
         menu_optiuni.add_command(label="Factură Nouă", command=lambda: self.arata_pagina(self.pagina_generare))
         menu_optiuni.add_command(label="Istoric / Căutare", command=lambda: self.arata_pagina(self.pagina_cautare))
+        menu_optiuni.add_command(label="🔑 Token ANAF / Transmitere e-Factura",
+                                 command=lambda: self.arata_pagina(self.pagina_anaf))
         menu_optiuni.add_separator()
         menu_optiuni.add_command(label="Ieșire", command=self.master.quit)
 
@@ -74,6 +80,11 @@ class AplicatieFacturi:
         elif pagina == self.pagina_cautare:
             if hasattr(self, 'cui_entry'):
                 self.cui_entry.focus_set()
+        elif pagina == self.pagina_anaf:
+            # Reîmprospătăm ambele tab-uri când deschidem pagina ANAF
+            if hasattr(self, 'efactura_tabs'):
+                self.efactura_tabs.incarca_tabel_netransmise()
+                self.efactura_tabs.incarca_tabel_trimise()
 
     def _setup_ui_start(self):
         p = self.pagina_start
@@ -85,6 +96,7 @@ class AplicatieFacturi:
             "• Folosiți meniul de sus pentru navigare.\n"
             "• 'Factură Nouă' - Generare fișiere PDF și XML (RO e-Factura).\n"
             "• 'Istoric' - Căutare și re-listare facturi emise anterior.\n"
+            "• 'Token ANAF / Transmitere' - Integrare directă cu portalul e-Factura.\n"
             "• CUI-urile sunt salvate automat pentru utilizări viitoare."
         )
 
@@ -100,8 +112,33 @@ class AplicatieFacturi:
         tk.Button(btn_frame, text="🔍 Consultă Istoric", font=("Arial", 11), width=20,
                   command=lambda: self.arata_pagina(self.pagina_cautare)).grid(row=0, column=1, padx=10)
 
+        tk.Button(btn_frame, text="🔑 Modul e-Factura", font=("Arial", 11), width=20,
+                  command=lambda: self.arata_pagina(self.pagina_anaf)).grid(row=0, column=2, padx=10)
+
         tk.Label(p, text="Versiune: 2026.1.0 | Status DB: Conectat", font=("Arial", 8),
                  bg="#e0f7fa", fg="gray").pack(side="bottom", pady=10)
+
+        # ==========================================
+        # MODUL E-FACTURA ANAF (INTEGRARE TAB-URI SEPARATE)
+        # ==========================================
+    def _setup_ui_anaf(self):
+        p = self.pagina_anaf
+
+        # Titlu
+        tk.Label(
+            p,
+            text="🏛️ Modul Transmitere RO e-Factura ANAF",
+            font=("Arial", 16, "bold"),
+            bg="#e0f7fa",
+            fg="#006064",
+        ).pack(pady=(15, 5))
+
+        # Adăugăm modulul de tab-uri, pasând CUI-ul furnizorului ca fallback
+        self.efactura_tabs = EFacturaNotebook(
+            p,
+            get_cui_furnizor_gen_callback=lambda: self.furnizor_cui.get().strip(),
+        )
+        self.efactura_tabs.pack(fill="both", expand=True, padx=10, pady=10)
 
     def _setup_ui_generare(self):
         self.produse = []
@@ -166,7 +203,6 @@ class AplicatieFacturi:
         tk.Label(self.produs_frame, text="Denumire produs / Explicație", font=("Arial", 11, "italic"),
                  bg="#e0f7fa").grid(row=0, column=0, sticky="w")
 
-        # Frame secundar pentru alinierea curată a ComboBox-ului și a butonului de Șabloane
         frame_explicatii_ctrl = tk.Frame(self.produs_frame, bg="#e0f7fa")
         frame_explicatii_ctrl.grid(row=1, column=0, padx=2, pady=5, sticky="w")
 
@@ -669,7 +705,6 @@ class AplicatieFacturi:
         win.resizable(False, False)
         win.grab_set()
 
-        # Structură bazată pe .pack() pentru a evita erorile de amestecare a geometriei
         frame_input = ttk.LabelFrame(win, text=" Explicație / Șablon ", padding=10)
         frame_input.pack(fill="x", padx=10, pady=5)
 
@@ -753,3 +788,9 @@ class AplicatieFacturi:
         ttk.Button(frame_btns, text="🗑️ Șterge", command=sterge).pack(side="right", padx=5)
 
         incarca_lista()
+
+    def actiune_verificare_stare(self):
+            rezultat = tr_anaf.actualizeaza_stare_facturi_pending()
+            messagebox.showinfo("Rezultat Verificare ANAF", rezultat)
+            self.incarca_tabel_facturi()  # Reîmprospătează Treeview-ul
+

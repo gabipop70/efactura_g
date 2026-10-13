@@ -1,0 +1,32 @@
+        try:
+            res = requests.post(
+                url_upload, headers=headers, data=xml_bytes, timeout=30
+            )
+
+            if res.status_code in (200, 201):
+                try:
+                    response_data = res.json()
+                    index_incarcare = response_data.get("index_incarcare")
+                    print(index_incarcare)
+                except Exception:
+                    index_incarcare = None
+
+                cursor.execute(
+                    """
+                    UPDATE facturi 
+                    SET tr_efact = 1, nr1 = ?, data_tr = CURRENT_TIMESTAMP 
+                    WHERE id = ?
+                """,
+                    (index_incarcare, id_factura),
+                )
+                conn.commit()
+                trimise_cu_succes += 1
+            else:
+                erori.append(
+                    f"Factura {nr_factura} (HTTP {res.status_code}): {res.text}"
+                )
+
+        except requests.exceptions.RequestException as req_err:
+            erori.append(
+                f"Factura {nr_factura}: Eroare la conectarea cu ANAF ({req_err})"
+            )
