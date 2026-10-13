@@ -542,35 +542,140 @@ def finalizeaza_autorizare_pas_2(httpd, timeout_sec=120):
 #
 #     return False, "Timeout: ANAF nu a finalizat prelucrarea în timpul alocat."
 
-def verifica_stare_anaf(index_incarcare, access_token, timeout_secunde=60, pauza_secunde=5):
-    url_stare = f"https://api.anaf.ro/efactura/prod/v1/stareMesaj?id_incarcare={index_incarcare}"
+# def verifica_stare_anaf(index_incarcare, access_token, timeout_secunde=60, pauza_secunde=5):
+#     url_stare = f"https://api.anaf.ro/efactura/prod/v1/stareMesaj?id_incarcare={index_incarcare}"
+#     headers = {"Authorization": f"Bearer {access_token}"}
+#
+#     timp_start = time.time()
+#
+#     while time.time() - timp_start < timeout_secunde:
+#         try:
+#             res = requests.get(url_stare, headers=headers, timeout=10)
+#             if res.status_code == 200:
+#                 data = res.json()
+#                 stare = data.get("stare")
+#
+#                 if stare == "ok":
+#                     id_descarcare = data.get("id_descarcare")
+#                     return True, id_descarcare, "Validată cu succes"
+#
+#                 elif stare == "nok":
+#                     id_descarcare = data.get("id_descarcare")
+#                     return False, id_descarcare, "Respinsă de ANAF"
+#
+#                 elif stare == "in prelucrare":
+#                     time.sleep(pauza_secunde)
+#                 else:
+#                     time.sleep(pauza_secunde)
+#             else:
+#                 time.sleep(pauza_secunde)
+#
+#         except requests.exceptions.RequestException:
+#             time.sleep(pauza_secunde)
+#
+#     return False, None, "Timeout: ANAF nu a finalizat prelucrarea în timpul alocat."
+
+def actualizeaza_stare_facturi_pending():
+    """Interoghează ANAF pentru facturile trimise (care au nr1/index_incarcare) dar fără nr2/id_descarcare."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT id, numar, nr1 
+        FROM facturi 
+        WHERE tr_efact = 1 AND nr1 IS NOT NULL AND (nr2 IS NULL OR nr2 = '')
+        """
+    )
+    facturi_pending = cursor.fetchall()
+
+    if not facturi_pending:
+        conn.close()
+        return "Toate facturile au starea actualizată sau nu există facturi în așteptare."
+
+    try:
+        access_token = obtine_access_token_valid()
+    except Exception as e:
+        conn.close()
+        return f"Eroare la obținerea token-ului ANAF:\n{str(e)}"
+
+    actualizate = 0
+    in_prelucrare = 0
+    erori = []
+
     headers = {"Authorization": f"Bearer {access_token}"}
 
-    timp_start = time.time()
+    # URL-ul oficial de starea mesajului ANAF
+    base_stare_url = (
+        "https://api.anaf.ro/test/FCTEL/rest/stareMesaj"
+        if SANDBOX
+        else "https://api.anaf.ro/prod/FCTEL/rest/stareMesaj"
+    )
 
-    while time.time() - timp_start < timeout_secunde:
+    for id_factura, nr_factura, index_incarcare in facturi_pending:
+        url_stare = f"{base_stare_url}?id_incarcare={index_incarcare}"
+
         try:
-            res = requests.get(url_stare, headers=headers, timeout=10)
+            res = requests.get(url_stare, headers=headers, timeout=15)
+
             if res.status_code == 200:
-                data = res.json()
+                data = {}
+                # Încercăm mai întâi parsare JSON
+                try:
+                    data = res.json()
+                except Exception:
+                    # Dacă ANAF a returnat XML/HTML în loc de JSON
+                    if "<?xml" in res.text or "<header" in res.text:
+                        try:
+                            root = ET.fromstring(res.text)
+                            stare_xml = root.attrib.get("stare")
+                            id_desc_xml = root.attrib.get("id_descarcare")
+                            data = {"stare": stare_xml, "id_descarcare": id_desc_xml}
+                        except Exception as e_xml:
+                            erori.append(f"Factura {nr_factura}: Eroare parsare XML stare ({e_xml})")
+                            continue
+                    else:
+                        erori.append(f"Factura {nr_factura}: Răspuns neașteptat de la ANAF: {res.text[:150]}")
+                        continue
+
                 stare = data.get("stare")
 
                 if stare == "ok":
                     id_descarcare = data.get("id_descarcare")
-                    return True, id_descarcare, "Validată cu succes"
+                    cursor.execute(
+                        "UPDATE facturi SET nr2 = ? WHERE id = ?",
+                        (id_descarcare, id_factura),
+                    )
+                    conn.commit()
+                    actualizate += 1
+                    print(f"Factura {nr_factura}: id_descarcare obținut -> {id_descarcare}")
 
                 elif stare == "nok":
                     id_descarcare = data.get("id_descarcare")
-                    return False, id_descarcare, "Respinsă de ANAF"
+                    cursor.execute(
+                        "UPDATE facturi SET nr2 = ? WHERE id = ?",
+                        (f"RESPINS_{id_descarcare}", id_factura),
+                    )
+                    conn.commit()
+                    erori.append(f"Factura {nr_factura}: Respinsă la validare de ANAF (ID Eroare: {id_descarcare})")
 
                 elif stare == "in prelucrare":
-                    time.sleep(pauza_secunde)
+                    in_prelucrare += 1
                 else:
-                    time.sleep(pauza_secunde)
+                    erori.append(f"Factura {nr_factura}: Stare necunoscută '{stare}' (Răspuns: {res.text[:100]})")
             else:
-                time.sleep(pauza_secunde)
+                erori.append(f"Factura {nr_factura}: HTTP {res.status_code} - {res.text[:100]}")
 
-        except requests.exceptions.RequestException:
-            time.sleep(pauza_secunde)
+        except requests.exceptions.RequestException as e:
+            erori.append(f"Factura {nr_factura}: Eroare conexiune rețea ({e})")
 
-    return False, None, "Timeout: ANAF nu a finalizat prelucrarea în timpul alocat."
+    conn.close()
+
+    rezultat = "Verificare finalizată!\n"
+    rezultat += f"• ID Descărcare obținut: {actualizate}\n"
+    rezultat += f"• Încă în prelucrare la ANAF: {in_prelucrare}\n"
+
+    if erori:
+        rezultat += "\nErori/Respingeri:\n" + "\n".join(erori)
+
+    return rezultat
