@@ -9,8 +9,38 @@ DB_NAME = "efactura.db"
 
 class EFacturaNotebook(ttk.Notebook):
 
-    def __init__(self, parent, get_cui_furnizor_gen_callback=None, *args, **kwargs):
+    def __init__(
+        self, parent, get_cui_furnizor_gen_callback=None, *args, **kwargs
+    ):
         super().__init__(parent, *args, **kwargs)
+
+        # --- CONFIGURARE STIL CULORI TAB-URI ---
+        style = ttk.Style()
+        # Setăm o temă compatibilă cu personalizarea culorilor (ex: 'default' sau 'clam')
+        style.theme_use("default")
+
+        style.configure(
+            "TNotebook.Tab",
+            background="#b2ebf2",  # Culoare fundal tab inactiv (albastru deschis)
+            foreground="#004d40",  # Culoare text tab inactiv
+            font=("Arial", 10, "bold"),
+            padding=[12, 6],
+
+        )
+
+        # Schimbăm aspectul când tab-ul este SELECTAT (activ) sau HOVER
+        style.map(
+            "TNotebook.Tab",
+            background=[
+                ("selected", "#00897b"),
+                ("active", "#4db6ac"),
+            ],  # Verde/Teal când e selectat
+            foreground=[
+                ("selected", "white"),
+                ("active", "black"),
+            ],  # Text alb când e selectat
+        )
+        # ----------------------------------------
 
         self.get_cui_furnizor_gen_callback = get_cui_furnizor_gen_callback
 
@@ -25,11 +55,9 @@ class EFacturaNotebook(ttk.Notebook):
             self.tab_trimise, text=" 🔄 Stare ANAF / Preluare ID Descărcare "
         )
 
-        # Construire interfețe vizuale
         self._setup_tab_netransmise()
         self._setup_tab_trimise()
 
-        # Încărcare date la pornire
         self.incarca_tabel_netransmise()
         self.incarca_tabel_trimise()
 

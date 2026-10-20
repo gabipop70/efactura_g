@@ -153,8 +153,38 @@ def export_pdf_notva(factura: Factura, filename="Factura.pdf"):
         ("ALIGN", (2, 1), (-1, -1), "RIGHT"),
         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
     ]))
-    
-    
+
+    index_incarcare = getattr(factura, 'nr1', None)
+    index_descarcare = getattr(factura, 'nr2', None)
+
+    if index_incarcare or index_descarcare:
+        elements.append(Spacer(1, 8))
+
+        text_anaf = "<b>Acreditare RO e-Factura (ANAF):</b> "
+        detalii = []
+        if index_incarcare:
+            detalii.append(f"Index încărcare: <b>{index_incarcare}</b>")
+        if index_descarcare:
+            detalii.append(f"Index descărcare / Stare: <b>{index_descarcare}</b>")
+
+        text_anaf += " | ".join(detalii)
+
+        p_anaf = Paragraph(text_anaf, style_celula)
+
+        tabel_anaf = Table([[p_anaf]], colWidths=[520])
+        tabel_anaf.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#e0f2f1')),  # nuanță deschisă de verde/teal
+            ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#00897b')),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+
+        elements.append(tabel_anaf)
+        elements.append(Spacer(1, 10))
+    else:
+        elements.append(Spacer(1, 15))
 
 # 1. Linie de separare (foarfecă)
     

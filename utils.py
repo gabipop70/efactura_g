@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 import unicodedata
+import sqlite3
 import re
 from datetime import datetime
 
@@ -190,94 +191,130 @@ def sugereaza_nr_chitanta(furnizori_cui):
 
 
 def genereaza_pdf_din_db(numar_factura):
-    import sqlite3
-    # clasele Factura, Furnizor, Client sunt importate
-
-    with sqlite3.connect('efactura.db') as conn:
+    with sqlite3.connect("efactura.db") as conn:
         conn.row_factory = sqlite3.Row
         c = conn.cursor()
 
-        # Luăm datele facturii, furnizorului și clientului într-un singur JOIN
-        c.execute("""
-                  SELECT f.*,
-                         fr.nume       as fr_nume,
-                         fr.cui        as fr_cui,
-                         fr.onrc       as fr_onrc,
-                         fr.adresa     as fr_adr,
-                         fr.localitate as fr_loc,
-                         fr.judet      as fr_jud,
-                         fr.tara	   as fr_tara,
-                         fr.banca      as fr_bnc,
-                         fr.iban       as fr_iban,
-                         fr.banca1	   as fr_banc1,
-                         fr.iban1      as fr_iban1,
-                         fr.ser_fac		as fr_ser_fac,
-                         cl.nume       as cl_nume,
-                         cl.cui        as cl_cui,
-                         cl.onrc       as cl_onrc,
-                         cl.adresa     as cl_adr,
-                         cl.localitate as cl_loc,
-                         cl.judet      as cl_jud,
-                         cl.tara	   as cl_tara,
-                         cl.banca      as cl_bnc,
-                         cl.iban       as cl_iban,
-                         cl.banca1	   as cl_banc1,
-                         cl.iban1      as cl_iban1
-                  FROM facturi f
-                           JOIN furnizori fr ON f.furnizor_id = fr.id
-                           JOIN clienti cl ON f.client_id = cl.id
-                  WHERE f.numar = ?
-                  """, (numar_factura,))
+        # 1. Extragere date factura, furnizor și client într-un singur JOIN
+        c.execute(
+            """
+            SELECT f.*,
+                   fr.nume       as fr_nume,
+                   fr.cui        as fr_cui,
+                   fr.onrc       as fr_onrc,
+                   fr.adresa     as fr_adr,
+                   fr.localitate as fr_loc,
+                   fr.judet      as fr_jud,
+                   fr.tara       as fr_tara,
+                   fr.banca      as fr_bnc,
+                   fr.iban       as fr_iban,
+                   fr.banca1     as fr_banc1,
+                   fr.iban1      as fr_iban1,
+                   fr.ser_fac    as fr_ser_fac,
+                   cl.nume       as cl_nume,
+                   cl.cui        as cl_cui,
+                   cl.onrc       as cl_onrc,
+                   cl.adresa     as cl_adr,
+                   cl.localitate as cl_loc,
+                   cl.judet      as cl_jud,
+                   cl.tara       as cl_tara,
+                   cl.banca      as cl_bnc,
+                   cl.iban       as cl_iban,
+                   cl.banca1     as cl_banc1,
+                   cl.iban1      as cl_iban1
+            FROM facturi f
+            JOIN furnizori fr ON f.furnizor_id = fr.id
+            JOIN clienti cl ON f.client_id = cl.id
+            WHERE f.numar = ?
+            """,
+            (numar_factura,),
+        )
 
         row = c.fetchone()
         if not row:
             print("Factura nu a fost găsită în baza de date.")
             return
 
-        # 2. Construim obiectele pentru funcția export_pdf
-        from factura import Factura, Entitate, Produs  # Exemplu structură
+        # 2. Construim obiectele Entitate (Furnizor & Client)
+        furnizori = Entitate(
+            nume=row["fr_nume"],
+            cui=row["fr_cui"],
+            onrc=row["fr_onrc"],
+            adresa=row["fr_adr"],
+            localitate=row["fr_loc"],
+            judet=row["fr_jud"],
+            tara=row["fr_tara"],
+            banca=row["fr_bnc"],
+            iban=row["fr_iban"],
+            banca1=row["fr_banc1"],
+            iban1=row["fr_iban1"],
+            ser_fac=row["fr_ser_fac"],
+        )
 
-        furnizori = Entitate(nume=row['fr_nume'], cui=row['fr_cui'], onrc=row['fr_onrc'],
-                            adresa=row['fr_adr'], localitate=row['fr_loc'],
-                            judet=row['fr_jud'], tara=row['fr_tara'], banca=row['fr_bnc'], iban=row['fr_iban'],
-                             banca1=row['fr_banc1'], iban1=row['fr_iban1'], ser_fac=row['fr_ser_fac'],)
+        clienti = Entitate(
+            nume=row["cl_nume"],
+            cui=row["cl_cui"],
+            onrc=row["cl_onrc"],
+            adresa=row["cl_adr"],
+            localitate=row["cl_loc"],
+            judet=row["cl_jud"],
+            tara=row["cl_tara"],
+            banca=row["cl_bnc"],
+            iban=row["cl_iban"],
+            banca1=row["cl_banc1"],
+            iban1=row["cl_iban1"],
+        )
 
-        clienti = Entitate(nume=row['cl_nume'], cui=row['cl_cui'], onrc=row['cl_onrc'],
-                        adresa=row['cl_adr'], localitate=row['cl_loc'],
-                        judet=row['cl_jud'], tara=row['cl_tara'], banca=row['cl_bnc'], iban=row['cl_iban'],
-                           banca1=row['cl_banc1'], iban1=row['cl_iban1'])
-        factura_obj = Factura(numar=row['numar'], data=row['data'], nr_chit=row['nr_chit'],
-                                  furnizor=furnizori, client=clienti)
+        # Extragere indecși ANAF din dicționarul de rând
+        # Folosim get pentru a evita KeyError dacă coloanele lipsesc
+        index_incarcare = row["nr1"] if "nr1" in row.keys() else None
+        index_descarcare = row["nr2"] if "nr2" in row.keys() else None
 
+        # Instanțiem obiectul Factura pasând și nr1, nr2
+        factura_obj = Factura(
+            numar=row["numar"],
+            data=row["data"],
+            nr_chit=row["nr_chit"],
+            furnizor=furnizori,
+            client=clienti,
+            nr1=index_incarcare,  # <--- Transmis la PDF
+            nr2=index_descarcare,  # <--- Transmis la PDF
+        )
 
-        # 3. Adăugăm produsele (trebuie să ai un tabel 'produse_factura' sau similar)
-        c.execute("SELECT * FROM produse_facturi WHERE factura_id = ?", (row['id'],))
+        # 3. Adăugăm produsele din baza de date
+        c.execute(
+            "SELECT * FROM produse_facturi WHERE factura_id = ?", (row["id"],)
+        )
         for p in c.fetchall():
-            factura_obj.adauga_produs(Produs(denumire=p['denumire'], um=p['um'],
-                                             cantitate=p['cantitate'], pret_unitar=p['pret_unitar'],
-                                             tva_percent=p['tva_percent']))
-        output_dir = "facturi"
-        data_curata = str(row['data']).strip().replace(":", "-")
+            factura_obj.adauga_produs(
+                Produs(
+                    denumire=p["denumire"],
+                    um=p["um"],
+                    cantitate=p["cantitate"],
+                    pret_unitar=p["pret_unitar"],
+                    tva_percent=p["tva_percent"],
+                )
+            )
 
+        # 4. Configurare cale și nume fișier PDF
         output_dir = "facturi"
-        nr_curat = str(row['numar']).strip().replace("/", "-")
-        data_curata = str(row['data']).strip().replace(":", "-")
-
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
 
-        # Construim numele fișierului folosind variabilele curățate
-        nume_pdf = f"Factura_{nr_curat}_{data_curata}.pdf"
+        nr_curat = str(row["numar"]).strip().replace("/", "-")
+        data_curata = str(row["data"]).strip().replace(":", "-")
 
-        # UTILIZĂM os.path.join pentru a evita eroarea de tip operand
+        nume_pdf = f"Factura_{nr_curat}_{data_curata}.pdf"
         cale_pdf = os.path.join(output_dir, nume_pdf)
 
-        print(f"DEBUG: Calea generată este: {cale_pdf}")  # Vez
-        # 4. Apelăm funcția ta de export
-        export_pdf(factura_obj, f"{output_dir}/Factura_{nr_curat}_{data_curata}.pdf")
-        nume_fis = f"{output_dir}\Factura_{row['numar']}_{row['data']}.pdf"
-        os.startfile(nume_fis)
+        print(f"DEBUG: Calea generată este: {cale_pdf}")
 
+        # 5. Generare PDF și Deschidere Automată
+        export_pdf(factura_obj, cale_pdf)
+
+        # Deschidem PDF-ul creat cu aplicația nativă din Windows
+        if os.path.exists(cale_pdf):
+            os.startfile(cale_pdf)
 # Functie centrare fereastra
 def centreaza_fereastra(fereastra, latime, inaltime):
     fereastra.update_idletasks()  # Asigură că dimensiunile sunt calculate corect

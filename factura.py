@@ -33,6 +33,7 @@ class Produs:
     def total_tva(self):
         return self.total() * self.tva_percent / 100
 
+
 @dataclass
 class Factura:
     numar: str
@@ -56,6 +57,10 @@ class Factura:
 
     nr_chit: str = ""
     cu_chitanta: bool = False
+    nr1: str = ""
+    nr2: str = ""
+
+
 
 def suma_in_litere(suma):
     # Liste cu cifre și zeci
