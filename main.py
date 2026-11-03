@@ -1,18 +1,38 @@
 import sys
 import os
-
-# Adaugă calea din executabilul PyInstaller la sys.path
-if getattr(sys, 'frozen', False):
-    sys.path.append(sys._MEIPASS)
-else:
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
 import tkinter as tk
-import meniu
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from db import creare_tabele, creare_tabele_utilizatori
+from login import FereastraLogin
 from meniu import AplicatieFacturi
 
 
-if __name__ == "__main__":
+def lansare_aplicatie():
+    # 1. Inițializăm tabelele în baza de date
+    creare_tabele()
+    creare_tabele_utilizatori()
+
     root = tk.Tk()
-    app = AplicatieFacturi(root)
+
+    def pe_login_succes(username, nume_complet):
+        # Distrugem widget-urile de login și lansăm interfața principală
+        for widget in root.winfo_children():
+            widget.destroy()
+        root.withdraw()
+        root.update_idletasks()
+        # Pornim aplicația principală
+        app = AplicatieFacturi(root)
+        root.title(
+            f"🧾 Sistem Gestiune e-Facturi | Utilizator: {nume_complet}"
+        )
+        root.deiconify()
+    # Lansăm mai întâi modulul de Login
+    FereastraLogin(root, on_login_success=pe_login_succes)
+
     root.mainloop()
+
+
+if __name__ == "__main__":
+    lansare_aplicatie()

@@ -24,7 +24,7 @@ PORT_LOCAL = 8080
 
 
 # --- CONFIGURĂRI GLOBALE ANAF ---
-SANDBOX = False  # True pentru Test, False pentru Producție
+SANDBOX = True  # True pentru Test, False pentru Producție
 
 # Endpoint-ul OAuth2 este identic (logincert.anaf.ro/anaf-oauth2/v1)
 URL_AUTORIZARE = "https://logincert.anaf.ro/anaf-oauth2/v1/authorize"

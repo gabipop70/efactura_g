@@ -1,3 +1,4 @@
+import hashlib
 from datetime import datetime
 import sqlite3
 import os
@@ -110,7 +111,8 @@ def creare_tabele():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 access_token TEXT,
                 refresh_token TEXT,
-                expires_at DATETIME
+                created_at DATETIME,
+                expires_in INTEGER
          )
     ''')
     conn.commit()
@@ -597,3 +599,50 @@ def sterge_explicatie_furnizor(cui_furnizor, text):
         conn.close()
     print(res)
     exit()
+
+def hash_parola(parola: str, salt: bytes = None) -> tuple[str, str]:
+    """Generat hash securizat PBKDF2 pentru parolă."""
+    if salt is None:
+        salt = os.urandom(16)
+    hash_obj = hashlib.pbkdf2_hmac(
+        "sha256", parola.encode("utf-8"), salt, 100000
+    )
+    return hash_obj.hex(), salt.hex()
+
+
+def verifica_parola(
+    parola_introdusa: str, hash_salvat: str, salt_salvat: str
+) -> bool:
+    """Verifică dacă parola introdusă se potrivește cu hash-ul din DB."""
+    salt_bytes = bytes.fromhex(salt_salvat)
+    hash_nou, _ = hash_parola(parola_introdusa, salt_bytes)
+    return hash_nou == hash_salvat
+
+
+def creare_tabele_utilizatori():
+    with sqlite3.connect("efactura.db") as conn:
+        cursor = conn.cursor()
+        # Tabel utilizatori
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS utilizatori (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                salt TEXT NOT NULL,
+                nume_complet TEXT
+            )
+        """)
+
+        # Adăugăm un user implicit 'admin' dacă tabelul este gol
+        cursor.execute("SELECT COUNT(*) FROM utilizatori")
+        if cursor.fetchone()[0] == 0:
+            hash_p, salt_p = hash_parola("admin")  # Parola implicită
+            cursor.execute(
+                """
+                INSERT INTO utilizatori (username, password_hash, salt, nume_complet)
+                VALUES (?, ?, ?, ?)
+            """,
+                ("admin", hash_p, salt_p, "Administrator"),
+            )
+            conn.commit()
+            print("✔ Utilizator implicit creat: admin / admin")

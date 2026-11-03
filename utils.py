@@ -316,17 +316,23 @@ def genereaza_pdf_din_db(numar_factura):
         if os.path.exists(cale_pdf):
             os.startfile(cale_pdf)
 # Functie centrare fereastra
-def centreaza_fereastra(fereastra, latime, inaltime):
-    fereastra.update_idletasks()  # Asigură că dimensiunile sunt calculate corect
+def centreaza_fereastra(fereastra, latime=1050, inaltime=620):
+    fereastra.update_idletasks()
 
-    ecran_w = fereastra.winfo_screenwidth()
-    ecran_h = fereastra.winfo_screenheight()
+    ecran_latime = fereastra.winfo_screenwidth()
+    ecran_inaltime = fereastra.winfo_screenheight()
 
-    x = (ecran_w // 2) - (latime // 2)
-    y = (ecran_h // 2) - (inaltime // 2)
+    # Dacă rezoluția ecranului este mică (sau cu scalare mare), ajustăm automat dimensiunile
+    if inaltime > ecran_inaltime - 80:
+        inaltime = ecran_inaltime - 100
+    if latime > ecran_latime - 40:
+        latime = ecran_latime - 40
+
+    x = (ecran_latime // 2) - (latime // 2)
+    # Ridicăm puțin fereastra mai sus de mijloc pentru a lăsa loc barei de taskbar Windows
+    y = max(0, (ecran_inaltime // 2) - (inaltime // 2) - 30)
 
     fereastra.geometry(f"{latime}x{inaltime}+{x}+{y}")
-
 def validare_cui(cui):
 	"""
        Verifică dacă un CUI este valid și returnează (True/False, mesaj).

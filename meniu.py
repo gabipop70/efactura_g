@@ -115,7 +115,7 @@ class AplicatieFacturi:
         tk.Button(btn_frame, text="🔑 Modul e-Factura", font=("Arial", 11), width=20,
                   command=lambda: self.arata_pagina(self.pagina_anaf)).grid(row=0, column=2, padx=10)
 
-        tk.Label(p, text="Versiune: 2026.1.0 | Status DB: Conectat", font=("Arial", 8),
+        tk.Label(p, text="gpop® Versiune: 2026.1.0 | Status DB: Conectat", font=("Arial", 8),
                  bg="#e0f7fa", fg="gray").pack(side="bottom", pady=10)
 
         # ==========================================
