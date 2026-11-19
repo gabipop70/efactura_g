@@ -115,6 +115,20 @@ def creare_tabele():
                 expires_in INTEGER
          )
     ''')
+
+    # Tabel pentru facturile primite de la furnizori
+    c.execute("""
+                CREATE TABLE IF NOT EXISTS facturi_primite (
+                    id_descarcare TEXT PRIMARY KEY,
+                    cui_beneficiar TEXT,
+                    cui_furnizor TEXT,
+                    nume_furnizor TEXT,
+                    numar_factura TEXT,
+                    data_factura TEXT,
+                    total REAL,
+                    cale_xml TEXT
+                )
+            """)
     conn.commit()
     conn.close()
 

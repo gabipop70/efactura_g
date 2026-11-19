@@ -1,6 +1,7 @@
 import sqlite3
 import tkinter as tk
 from tkinter import messagebox, ttk
+from anaf_primite import sincronizeaza_facturi_primite
 
 import tr_anaf
 
@@ -361,3 +362,110 @@ class EFacturaNotebook(ttk.Notebook):
         rezultat = tr_anaf.actualizeaza_stare_facturi_pending()
         messagebox.showinfo("Rezultat Verificare ANAF", rezultat)
         self.incarca_tabel_trimise()
+
+    def _construieste_interfata_primite(self):
+        # Buton sincronizare ANAF
+        btn_sync = tk.Button(
+            self.pagina_primite,
+            text="🔄 Preluare Facturi Noi (ANAF)",
+            font=("Arial", 10, "bold"),
+            bg="#0277bd",
+            fg="white",
+            cursor="hand2",
+            command=self.sincronizeaza_primite,
+        )
+        btn_sync.pack(pady=10)
+
+        # Tabel Facturi Primite
+        cols = ("data", "furnizor", "cui", "numar", "total", "id_descarcare")
+        self.tree_primite = ttk.Treeview(
+            self.pagina_primite, columns=cols, show="headings", height=15
+        )
+
+        self.tree_primite.heading("data", text="Data")
+        self.tree_primite.heading("furnizor", text="Furnizor")
+        self.tree_primite.heading("cui", text="CUI Furnizor")
+        self.tree_primite.heading("numar", text="Nr. Factură")
+        self.tree_primite.heading("total", text="Total (RON)")
+        self.tree_primite.heading("id_descarcare", text="Index ANAF")
+
+        self.tree_primite.column("data", width=90, anchor="center")
+        self.tree_primite.column("furnizor", width=250, anchor="w")
+        self.tree_primite.column("cui", width=100, anchor="center")
+        self.tree_primite.column("numar", width=100, anchor="center")
+        self.tree_primite.column("total", width=90, anchor="e")
+        self.tree_primite.column("id_descarcare", width=120, anchor="center")
+
+        scrollbar = ttk.Scrollbar(
+            self.pagina_primite,
+            orient="vertical",
+            command=self.tree_primite.yview,
+        )
+        self.tree_primite.configure(yscroll=scrollbar.set)
+
+        self.tree_primite.pack(
+            side="left", fill="both", expand=True, padx=10, pady=10
+        )
+        scrollbar.pack(side="right", fill="y", pady=10)
+
+        # Încărcăm datele existente din baza de date
+        self.incarca_tabel_primite()
+
+    def incarca_tabel_primite(self):
+        for item in self.tree_primite.get_children():
+            self.tree_primite.delete(item)
+
+        with sqlite3.connect("efactura.db") as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT data_factura, nume_furnizor, cui_furnizor,"
+                " numar_factura, total, id_descarcare FROM facturi_primite"
+                " ORDER BY data_factura DESC"
+            )
+            for row in cursor.fetchall():
+                total_formatat = (
+                    f"{row['total']:.2f}" if row["total"] else "0.00"
+                )
+                valori = (
+                    row["data_factura"],
+                    row["nume_furnizor"],
+                    row["cui_furnizor"],
+                    row["numar_factura"],
+                    total_formatat,
+                    row["id_descarcare"],
+                )
+                self.tree_primite.insert("", "end", values=valori)
+
+    def sincronizeaza_primite(self):
+        # Preluăm token-ul și CUI-ul folosite în aplicație
+        token = getattr(self, "token_anaf", None)
+        cui = (
+            self.furnizor_cui.get().strip()
+            if hasattr(self, "furnizor_cui")
+            else ""
+        )
+
+        if not token or not cui:
+            messagebox.showwarning(
+                "Atenție",
+                "Lipsește Token-ul ANAF sau CUI-ul firmei în interfață!",
+            )
+            return
+
+        messagebox.showinfo(
+            "Sincronizare",
+            "Interogare ANAF în curs...\nVă rugăm așteptați.",
+        )
+
+        facturi_noi = sincronizeaza_facturi_primite(cui, token)
+
+        if facturi_noi > 0:
+            messagebox.showinfo(
+                "Succes", f"Au fost descărcate {facturi_noi} facturi noi!"
+            )
+            self.incarca_tabel_primite()
+        else:
+            messagebox.showinfo(
+                "Info", "Nu au fost găsite facturi noi de la ANAF."
+            )

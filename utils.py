@@ -3,6 +3,8 @@
 import os
 import unicodedata
 import sqlite3
+import os
+from lxml import etree
 import re
 from datetime import datetime
 
@@ -434,3 +436,47 @@ def get_abreviere_judet(nume_judet):
     nfd = unicodedata.normalize('NFD', str(nume_judet).upper())
     fara_diacritice = ''.join(c for c in nfd if unicodedata.category(c) != 'Mn').replace('Ţ', 'T').replace('Ş', 'S')
     return MAP_ABREVIERI.get(fara_diacritice, "N/A")
+
+
+import os
+import requests
+
+URL_TRANSFORMARE_FACT1 = "https://api.anaf.ro/prod/FCTEL/rest/transformare/FACT1"
+
+
+def converteste_xml_in_pdf_anaf(xml_path, token_anaf, output_pdf_path=None):
+  """Trimite un fișier XML către serviciul oficial ANAF XmlToPdf și salvează PDF-ul."""
+  if not os.path.exists(xml_path):
+    raise FileNotFoundError(f"Fișierul XML nu există: {xml_path}")
+
+  if not output_pdf_path:
+    output_pdf_path = os.path.splitext(xml_path)[0] + "_anaf.pdf"
+
+  with open(xml_path, "rb") as f:
+    xml_bytes = f.read()
+
+  headers = {
+      "Authorization": f"Bearer {token_anaf}",
+      "Content-Type": "text/plain",
+  }
+
+  raspuns = requests.post(
+      URL_TRANSFORMARE_FACT1, data=xml_bytes, headers=headers, timeout=30
+  )
+
+  if raspuns.status_code != 200:
+    raise RuntimeError(
+        f"Eroare ANAF XmlToPdf ({raspuns.status_code}): {raspuns.text}"
+    )
+
+  # Verificăm rapid că am primit un PDF valid (începe cu %PDF)
+  if not raspuns.content.startswith(b"%PDF"):
+    raise RuntimeError(
+        f"Răspunsul ANAF nu este un PDF valid: {raspuns.text[:300]}"
+    )
+
+  os.makedirs(os.path.dirname(os.path.abspath(output_pdf_path)), exist_ok=True)
+  with open(output_pdf_path, "wb") as f_out:
+    f_out.write(raspuns.content)
+
+  return output_pdf_path

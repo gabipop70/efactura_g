@@ -1,8 +1,14 @@
+import os
+import sqlite3
 import tkinter as tk
 from tkcalendar import DateEntry
 from datetime import datetime
 from tkinter import ttk, messagebox
+
+from efactura_g.tr_anaf import obtine_access_token_valid
+from pdf_generator2_index import export_pdf
 from tab_facturi import EFacturaNotebook
+from anaf_primite import sincronizeaza_facturi_primite
 
 import db
 from db import (
@@ -15,6 +21,7 @@ from db import (
 import utils
 import tr_anaf  # Modulul de backend pentru RO e-Factura
 from factura import AutoCompleteEntry
+from tr_anaf import preia_refresh_token
 from utils import centreaza_fereastra, sugereaza_nr_chitanta, validare_cui, validare_cnp
 
 
@@ -38,11 +45,12 @@ class AplicatieFacturi:
         self.pagina_generare = tk.Frame(self.container, bg="#e0f7fa")
         self.pagina_cautare = tk.Frame(self.container, bg="#e0f7fa")
         self.pagina_anaf = tk.Frame(self.container, bg="#e0f7fa")
+        self.pagina_primite = tk.Frame(self.container, bg="#e0f7fa")
 
         # --- CONFIGURARE MENIU ---
         self.creeaza_meniu()
 
-        for p in (self.pagina_start, self.pagina_generare, self.pagina_cautare, self.pagina_anaf):
+        for p in (self.pagina_start, self.pagina_generare, self.pagina_cautare, self.pagina_anaf, self.pagina_primite,):
             p.grid(row=0, column=0, sticky="nsew")
 
         self.container.grid_rowconfigure(0, weight=1)
@@ -53,6 +61,7 @@ class AplicatieFacturi:
         self._setup_ui_generare()
         self._setup_ui_cautare()
         self._setup_ui_anaf()
+        self._setup_ui_primite()
 
         # Afișăm prima pagină
         self.arata_pagina(self.pagina_start)
@@ -70,6 +79,10 @@ class AplicatieFacturi:
         menu_optiuni.add_command(label="Istoric / Căutare", command=lambda: self.arata_pagina(self.pagina_cautare))
         menu_optiuni.add_command(label="🔑 Token ANAF / Transmitere e-Factura",
                                  command=lambda: self.arata_pagina(self.pagina_anaf))
+        menu_optiuni.add_command(
+            label="📥 Facturi Primite (ANAF)",
+            command=lambda: self.arata_pagina(self.pagina_primite),
+        )
         menu_optiuni.add_separator()
         menu_optiuni.add_command(label="Ieșire", command=self.master.quit)
 
@@ -85,6 +98,11 @@ class AplicatieFacturi:
             if hasattr(self, 'efactura_tabs'):
                 self.efactura_tabs.incarca_tabel_netransmise()
                 self.efactura_tabs.incarca_tabel_trimise()
+        elif pagina == self.pagina_primite:
+            if hasattr(self, "incarca_tabel_primite"):
+                self.incarca_tabel_primite()
+
+
 
     def _setup_ui_start(self):
         p = self.pagina_start
@@ -114,6 +132,9 @@ class AplicatieFacturi:
 
         tk.Button(btn_frame, text="🔑 Modul e-Factura", font=("Arial", 11), width=20,
                   command=lambda: self.arata_pagina(self.pagina_anaf)).grid(row=0, column=2, padx=10)
+
+        tk.Button(btn_frame, text="🔑 E-factura - Facturi primite", font=("Arial", 11), width=20,
+                  command=lambda: self.arata_pagina(self.pagina_primite)).grid(row=0, column=3, padx=10)
 
         tk.Label(p, text="gpop® Versiune: 2026.1.0 | Status DB: Conectat", font=("Arial", 8),
                  bg="#e0f7fa", fg="gray").pack(side="bottom", pady=10)
@@ -793,4 +814,267 @@ class AplicatieFacturi:
             rezultat = tr_anaf.actualizeaza_stare_facturi_pending()
             messagebox.showinfo("Rezultat Verificare ANAF", rezultat)
             self.incarca_tabel_facturi()  # Reîmprospătează Treeview-ul
+
+    def _setup_ui_primite(self):
+        p = self.pagina_primite
+        # Atașăm un eveniment de dublu-click pe rândurile din tabel
+
+
+        tk.Label(
+            p,
+            text="📥 Gestionare Facturi Primite (SPV / ANAF)",
+            font=("Arial", 16, "bold"),
+            bg="#e0f7fa",
+            fg="#006064",
+        ).pack(pady=(15, 5))
+
+        # --- CADRU SELECTARE FURNIZOR / CUI CU AUTOCOMPLETE ---
+        frame_sus_cui = tk.Frame(p, bg="#e0f7fa")
+        frame_sus_cui.pack(pady=5)
+
+        tk.Label(frame_sus_cui, text="Denumire Firmă:", font=("Arial", 10, "bold"), bg="#e0f7fa").pack(side="left",
+                                                                                                       padx=5)
+
+        # Câmpul pentru denumire (pe care va rula AutoCompleteEntry)
+        self.entry_nume_primite = tk.Entry(frame_sus_cui, font=("Arial", 10), width=25)
+        self.entry_nume_primite.pack(side="left", padx=5)
+
+        tk.Label(frame_sus_cui, text="CUI:", font=("Arial", 10, "bold"), bg="#e0f7fa").pack(side="left", padx=(15, 5))
+
+        # Câmpul unde se va completa automat CUI-ul selectat
+        self.entry_cui_primite = tk.Entry(frame_sus_cui, font=("Arial", 10), width=15)
+        self.entry_cui_primite.pack(side="left", padx=5)
+
+        self.entry_cui_primite.bind("<KeyRelease>", self.incarca_tabel_primite)
+        self.entry_cui_primite.bind("<Return>", self.incarca_tabel_primite)
+        self.entry_cui_primite.bind("<FocusOut>", self.incarca_tabel_primite)
+
+
+
+        # Funcție de completare automată la selecție din listă
+        def selecteaza_furnizor_primite(row):
+            self.entry_cui_primite.delete(0, tk.END)
+            self.entry_cui_primite.insert(0, row[0])  # CUI-ul poziționat în row[0]
+            self.entry_nume_primite.delete(0, tk.END)
+            self.entry_nume_primite.insert(0, row[1])  # Numele poziționat în row[1]
+            self.incarca_tabel_primite()
+
+        # Atașăm AutoCompleteEntry exact ca la facturile emise
+        self.autocomplete_primite = AutoCompleteEntry(
+            entry=self.entry_nume_primite,
+            search_callback=cauta_furnizori,
+            select_callback=selecteaza_furnizor_primite
+        )
+
+        btn_sync = tk.Button(
+            frame_sus_cui,
+            text="🔄 Preluare Facturi Noi (ANAF)",
+            font=("Arial", 9, "bold"),
+            bg="#0277bd",
+            fg="white",
+            cursor="hand2",
+            command=self.sincronizeaza_primite_action,
+        )
+        btn_sync.pack(side="left", padx=15)
+
+        btn_pdf = tk.Button(
+            p,
+            text="📄 Vizualizează Factura Selectată (PDF)",
+            bg="#2196f3",
+            fg="white",
+            font=("Arial", 10, "bold"),
+            command=self.action_listeaza_factura_primita_pdf,
+        )
+        btn_pdf.pack(pady=5)
+
+        # --- CADRU PENTRU TABEL ȘI SCROLLBAR ---
+        frame_tabel = tk.Frame(p, bg="#e0f7fa")
+        frame_tabel.pack(fill="both", expand=True, padx=10, pady=10)
+
+        cols = ("data", "furnizor", "cui", "numar", "total", "id_descarcare")
+        self.tree_primite = ttk.Treeview(
+            frame_tabel, columns=cols, show="headings", height=15
+        )
+
+        self.tree_primite.heading("data", text="Data")
+        self.tree_primite.heading("furnizor", text="Furnizor")
+        self.tree_primite.heading("cui", text="CUI Furnizor")
+        self.tree_primite.heading("numar", text="Nr. Factură")
+        self.tree_primite.heading("total", text="Total (RON)")
+        self.tree_primite.heading("id_descarcare", text="Index ANAF")
+
+        self.tree_primite.column("data", width=90, anchor="center")
+        self.tree_primite.column("furnizor", width=250, anchor="w")
+        self.tree_primite.column("cui", width=100, anchor="center")
+        self.tree_primite.column("numar", width=100, anchor="center")
+        self.tree_primite.column("total", width=90, anchor="e")
+        self.tree_primite.column("id_descarcare", width=120, anchor="center")
+
+        scrollbar = ttk.Scrollbar(
+            frame_tabel, orient="vertical", command=self.tree_primite.yview
+        )
+        self.tree_primite.configure(yscroll=scrollbar.set)
+
+        self.tree_primite.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        self.tree_primite.bind("<Double-1>", self.action_listeaza_factura_primita_pdf)
+
+        self.incarca_tabel_primite()
+
+    def incarca_tabel_primite(self, event=None):
+        for item in self.tree_primite.get_children():
+            self.tree_primite.delete(item)
+
+        cif_activ = self._obtine_cif_filtrat()
+        print("DEBUG CIF:", repr(cif_activ))
+        if not cif_activ:
+            return
+
+        with sqlite3.connect("efactura.db") as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                    SELECT id_descarcare, cui_beneficiar, cui_furnizor, nume_furnizor, numar_factura, data_factura, total
+                    FROM facturi_primite
+                    WHERE TRIM(cui_beneficiar) = ?
+                    ORDER BY data_factura DESC
+                """,
+                (cif_activ,),
+            )
+            rows = cursor.fetchall()
+            print("DEBUG ROWS COUNT:", len(rows))
+            for r in rows:
+                print("DEBUG ROW:", dict(r))
+
+        for r in rows:
+            self.tree_primite.insert(
+                "",
+                "end",
+                values=(
+                    r["data_factura"],
+                    r["nume_furnizor"],
+                    r["cui_furnizor"],
+                    r["numar_factura"],
+                    f"{float(r['total'] or 0):.2f}",
+                    r["id_descarcare"],
+                ),
+            )
+
+    def sincronizeaza_primite_action(self):
+        # Preluăm CUI-ul scris direct în căsuța dedicată din această pagină
+        cui = self.entry_cui_primite.get().strip()
+        if not cui:
+            messagebox.showwarning(
+                "Atenție",
+                (
+                    "Introduceți CUI-ul firmei pentru care doriți să preluați"
+                    " facturile primite!"
+                ),
+            )
+            return
+
+        token = obtine_access_token_valid()
+        if not token and hasattr(self, "efactura_tabs"):
+            token = getattr(self.efactura_tabs, "token", None)
+
+
+        messagebox.showinfo(
+            "Sincronizare",
+            f"Interogare ANAF pentru CUI: {cui}...\n si token: {token}...\nVă rugăm așteptați.",
+        )
+
+        try:
+            # Asigură-te că ai și importul: from anaf_primite import sincronizeaza_facturi_primite sus în meniu.py
+            facturi_noi = sincronizeaza_facturi_primite(cui, token)
+            if facturi_noi > 0:
+                messagebox.showinfo(
+                    "Succes",
+                    (
+                        f"Au fost descărcate {facturi_noi} facturi noi în folderul"
+                        f" 'primite/{cui}'!"
+                    ),
+                )
+                self.incarca_tabel_primite()
+            else:
+                messagebox.showinfo(
+                    "Info",
+                    "Nu au fost găsite facturi noi de la ANAF pentru acest CUI.",
+                )
+        except Exception as e:
+            messagebox.showerror(
+                "Eroare Sincronizare", f"A apărut o eroare:\n{str(e)}"
+            )
+
+    def action_listeaza_factura_primita_pdf(self, event=None):
+        selected_item = self.tree_primite.selection()
+        if not selected_item:
+            messagebox.showwarning(
+                "Atenție", "Selectează o factură primită din listă!"
+            )
+            return
+
+        item_values = self.tree_primite.item(selected_item, "values")
+        if not item_values:
+            return
+
+        # Ultima coloană din tabel conține id_descarcare
+        id_descarcare = item_values[-1]
+
+        try:
+            with sqlite3.connect("efactura.db") as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT cale_xml FROM facturi_primite WHERE id_descarcare = ?",
+                    (id_descarcare,),
+                )
+                row = cursor.fetchone()
+
+            if (
+                    not row
+                    or not row["cale_xml"]
+                    or not os.path.exists(row["cale_xml"])
+            ):
+                messagebox.showerror(
+                    "Eroare", "Nu s-a găsit fișierul XML pe disc pentru această factură."
+                )
+                return
+
+            xml_path = row["cale_xml"]
+            pdf_path = os.path.splitext(xml_path)[0] + "_anaf.pdf"
+
+            # Folosim același token obținut la sincronizare
+            token = obtine_access_token_valid()  # metoda ta existentă care întoarce access_token
+            if not token:
+                messagebox.showwarning(
+                    "Atenție", "Nu s-a găsit un token ANAF valid."
+                )
+                return
+
+            utils.converteste_xml_in_pdf_anaf(xml_path, token, pdf_path)
+            os.startfile(pdf_path)
+
+        except Exception as e:
+            messagebox.showerror(
+                "Eroare PDF ANAF", f"Nu s-a putut genera PDF-ul ANAF:\n{e}"
+            )
+
+    def _obtine_cif_filtrat(self):
+        """Returnează CIF-ul numeric (fără RO) dacă este completat, altfel None."""
+        # Înlocuiește 'self.entry_cui_primite' cu numele real al widget-ului tău de CUI
+        widget = getattr(self, "entry_cui_primite", None) or getattr(
+            self, "entry_cui", None
+        )
+        if not widget:
+            return None
+
+        val = widget.get().strip().upper()
+        if val.startswith("RO"):
+            val = val[2:].strip()
+
+        # Păstrăm doar cifrele; dacă nu există nimic, considerăm câmpul necompletat
+        cif = "".join(ch for ch in val if ch.isdigit())
+        return cif if cif else None
 
